@@ -29,19 +29,19 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 500
+MIN_AREA = 4000
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 20000
+MIN_AREA_TRACK = 30000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 75.0
+LINEAR_SPEED = 90.0
 RAMPUP = 80.0
 
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 5/100
+KP = 10/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 4
@@ -137,15 +137,23 @@ def get_contour_data(mask, out):
     mark = {}
     line = {}
 
+    contour_areas = []
     for contour in contours:
 
+        M = cv2.moments(contour)
+        contour_areas.append((contour, M['m00']))
+
+    contour_areas.sort(key=lambda x: x[1])
+
+    contours = list(contours)
+
+    for contour, area in contour_areas:
         M = cv2.moments(contour)
         # Search more about Image Moments on Wikipedia :)
 
         if M['m00'] > MIN_AREA:
-        # if countor.area > MIN_AREA:
 
-            if (M['m00'] > MIN_AREA_TRACK):
+            if (M['m00'] > MIN_AREA_TRACK) and (contours.index(contour) == (len(contours) - 1)):
                 # Contour is part of the track
                 line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                 line['y'] = int(M["m01"]/M["m00"])
@@ -240,6 +248,8 @@ def process_frame(image_input):
         if just_seen_line:
             just_seen_line = False
             error = error * LOSS_FACTOR
+
+        print("LOST.", end=" ")
         linear = 0.0
 
     if mark_side != None:
@@ -262,7 +272,7 @@ def process_frame(image_input):
 
 
     # Determine the speed to turn and get the line in the center of the camera.
-    angular = float(error) * -KP
+    angular = float(error) * KP
 
     debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error}"
     print(debug_str)
