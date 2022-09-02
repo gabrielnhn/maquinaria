@@ -32,10 +32,10 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 MIN_AREA = 500
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 5000
+MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 20.0
+LINEAR_SPEED = 70.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
@@ -54,7 +54,7 @@ FINALIZATION_PERIOD = 4
 MAX_ERROR = 30
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([143,  198,  0])
+lower_bgr_values = np.array([143,  118,  0])
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -79,6 +79,7 @@ just_seen_right_mark = False
 should_move = False
 right_mark_count = 0
 finalization_countdown = None
+should_show = False
 
 def show_callback():
     global should_show
@@ -272,6 +273,7 @@ def process_frame(image_input):
 
     #Show the output image to the user
 
+    global should_show
     if should_show:
         cv2.imshow("output", output)
         # Print the image for 5milis, then resume execution
@@ -283,14 +285,15 @@ def process_frame(image_input):
             finalization_countdown -= 1
 
         elif finalization_countdown == 0:
-            should_move = False
+            #should_move = False
+            pass
 
 
     # Publish the message to 'cmd_vel'
     if should_move:
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
-
+        print(linear, angular)
     else:
         motor_left.stop()
         motor_right.stop()
@@ -315,7 +318,7 @@ def remove_padding(data, width, height, bit_width):
         buff[:, byte::5] |= ((buff[:, 4::5] >> ((4 - byte) * 2)) & 0b11)
     # delete the unused pix
     buff = np.delete(buff, np.s_[4::5], 1)
-    return buff 
+    return buff
 
 def main():
     signal.signal(signal.SIGALRM, timeout)
