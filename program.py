@@ -35,11 +35,11 @@ MIN_AREA = 500
 MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 70.0
+LINEAR_SPEED = 80.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 15/100
+KP = 5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -84,6 +84,8 @@ should_show = False
 def show_callback():
     global should_show
     should_show = True
+    print("SHOWING")
+    print(">>", end="")
 
 def start_follower_callback(request, response):
     """
@@ -218,6 +220,7 @@ def process_frame(image_input):
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - width//2
+        # print(f"x: {x}, error {error}")
 
         linear = LINEAR_SPEED
         just_seen_line = True
@@ -256,7 +259,7 @@ def process_frame(image_input):
     angular = float(error) * -KP
 
     debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error}"
-    # print(debug_str)
+    print(debug_str)
 
     text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
     text_w, text_h = text_size
@@ -293,7 +296,7 @@ def process_frame(image_input):
     if should_move:
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
-        print(linear, angular)
+        # print(linear, angular)
     else:
         motor_left.stop()
         motor_right.stop()
