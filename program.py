@@ -4,7 +4,7 @@ A ROS2 node used to control a differential drive robot with a camera,
 so it follows the line in a Robotrace style track.
 You may change the parameters to your liking.
 """
-__author__ = "Gabriel Hishida and Gabriel Pontarolo"
+__author__ = "Gabriel Nascarella Hishida do Nascimento"
 
 import numpy as np
 import cv2
@@ -36,14 +36,15 @@ MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
 LINEAR_SPEED = 75.0
-RAMPUP = 80
+RAMPUP = 80.0
+
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 10/100
+KP = 5/100
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 5
+LOSS_FACTOR = 4
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -101,14 +102,9 @@ def start_follower_callback(request, response):
     right_mark_count = 0
     finalization_countdown = None
 
-    # RAMP UP!!!!!!!!!!!!!!!!!!!!!
-    signal.setitimer(signal.ITIMER_REAL, 0)
-    motor_left.run(RAMPUP)
-    motor_right.run(RAMPUP)
-    time.sleep(0.5)
-
-    # signal.setitimer(signal.ITIMER_REAL, 0.1)
-
+    # RAMPUP
+    #motor_left.run(RAMPUP)
+    #motor_left.run(RAMPUP)
 
     print(">>", end="")
     return response
@@ -239,13 +235,12 @@ def process_frame(image_input):
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
 
     else:
-        print("LOST", end=". ")
         # There is no line in the image.
         # Turn on the spot to find it again.
         if just_seen_line:
             just_seen_line = False
             error = error * LOSS_FACTOR
-        linear = 15
+        linear = 0.0
 
     if mark_side != None:
         # print("mark_side: {}".format(mark_side))
@@ -307,8 +302,6 @@ def process_frame(image_input):
     if should_move:
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
-
-        print(f"left: {int(linear - angular)}, right: {int(linear + angular)}")
         # print(linear, angular)
     else:
         motor_left.stop()
@@ -338,7 +331,7 @@ def main():
 
             try:
             # ask user whether robot should move:
-                signal.setitimer(signal.ITIMER_REAL, 0.1)
+                signal.setitimer(signal.ITIMER_REAL, 0.01)
                 inp = input()
                 if inp == "start":
                     start_follower_callback(None, None)
@@ -375,5 +368,3 @@ finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
-    # video.close()
-
