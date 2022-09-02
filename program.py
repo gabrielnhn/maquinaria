@@ -29,10 +29,10 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 4000
+MIN_AREA = 2000
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 30000
+MIN_AREA_TRACK = 15000
 
 # Robot's speed when following the line
 LINEAR_SPEED = 90.0
@@ -103,8 +103,8 @@ def start_follower_callback(request, response):
     finalization_countdown = None
 
     # RAMPUP
-    #motor_left.run(RAMPUP)
-    #motor_left.run(RAMPUP)
+    motor_left.run(RAMPUP)
+    motor_left.run(RAMPUP)
 
     print(">>", end="")
     return response
@@ -138,22 +138,23 @@ def get_contour_data(mask, out):
     line = {}
 
     contour_areas = []
+    count = 0
     for contour in contours:
-
         M = cv2.moments(contour)
-        contour_areas.append((contour, M['m00']))
+        contour_areas.append((contour, M['m00'], count))
+        count += 1
 
     contour_areas.sort(key=lambda x: x[1])
 
     contours = list(contours)
 
-    for contour, area in contour_areas:
+    for contour, area, index in contour_areas:
         M = cv2.moments(contour)
         # Search more about Image Moments on Wikipedia :)
 
         if M['m00'] > MIN_AREA:
 
-            if (M['m00'] > MIN_AREA_TRACK) and (contours.index(contour) == (len(contours) - 1)):
+            if (M['m00'] > MIN_AREA_TRACK) and (index == max(contour_areas, key=lambda x: x[1])[2]):
                 # Contour is part of the track
                 line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                 line['y'] = int(M["m01"]/M["m00"])
@@ -304,8 +305,8 @@ def process_frame(image_input):
             finalization_countdown -= 1
 
         elif finalization_countdown == 0:
-            #should_move = False
-            pass
+            should_move = False
+            
 
 
     print(f"left: {int(linear - angular)}, right {int(linear + angular)}")
@@ -314,10 +315,12 @@ def process_frame(image_input):
     if should_move:
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
+    
 
     else:
         motor_left.stop()
         motor_right.stop()
+    
 
 
 def timeout(signum, frame):
@@ -375,9 +378,10 @@ except KeyboardInterrupt:
 
 except Exception as e:
     print(e)
+    raise e
 
 finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
-    # video.close()
+    video.close()
