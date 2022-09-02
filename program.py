@@ -319,9 +319,10 @@ def timeout(signum, frame):
     raise TimeoutError
 
 def main():
-    signal.signal(signal.SIGALRM, timeout)
+    # signal.signal(signal.SIGALRM, timeout)
     # Use system signals to stop input()
-
+    global should_move
+    should_move = True
     video = cv2.VideoCapture(0)
 
     # print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
@@ -333,8 +334,9 @@ def main():
     print(">>", end="")
 
     while retval:
-        try:
-            process_frame(image)
+        # try:
+        process_frame(image)
+        retval, image = video.read()
 
             try:
             # ask user whether robot should move:
@@ -353,7 +355,6 @@ def main():
             except TimeoutError:
                 pass
 
-            retval, image = video.read()
 
         except TimeoutError:
             pass
