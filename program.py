@@ -298,11 +298,13 @@ def process_frame(image_input):
             pass
 
 
+    print(f"left: {int(linear - angular)}, right {int(linear + angular)}")
+
     # Publish the message to 'cmd_vel'
     if should_move:
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
-        # print(linear, angular)
+
     else:
         motor_left.stop()
         motor_right.stop()
@@ -368,3 +370,4 @@ finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
+    # video.close()
