@@ -29,10 +29,10 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 2000
+MIN_AREA = 500
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 15000
+MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
 LINEAR_SPEED = 90.0
