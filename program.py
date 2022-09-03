@@ -33,14 +33,15 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 MIN_AREA = 3000
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 20000
+MIN_AREA_TRACK = 30000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 69.0
+LINEAR_SPEED = 70.0
+LOSS_SPEED = 76.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 6/100
+KP = 5.5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.25
@@ -254,10 +255,10 @@ def process_frame(image_input):
         #     just_seen_line = False
         #     error = error * LOSS_FACTOR
         if error > 0:
-            angular = 73.0 
+            angular = LOSS_SPEED 
             error = width // 2
         else:
-            angular = -73.0 
+            angular = -LOSS_SPEED
             error = -(width // 2)
 
         print("LOST.", end=" ")
