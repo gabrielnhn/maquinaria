@@ -36,16 +36,14 @@ MIN_AREA = 3000
 MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 70.0
-RAMPUP = 80.0
-
+LINEAR_SPEED = 60.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 10/100
+KP = 6/100
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 4
+LOSS_FACTOR = 1.25
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -247,9 +245,13 @@ def process_frame(image_input):
     else:
         # There is no line in the image.
         # Turn on the spot to find it again.
-        if just_seen_line:
-            just_seen_line = False
-            error = error * LOSS_FACTOR
+        # if just_seen_line:
+        #     just_seen_line = False
+        #     error = error * LOSS_FACTOR
+        if error > 0:
+            error = width // 2
+        else:
+            error = -(width // 2)
 
         print("LOST.", end=" ")
         linear = 0.0
