@@ -30,13 +30,13 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 500
+MIN_AREA = 3000
 
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 90.0
+LINEAR_SPEED = 70.0
 RAMPUP = 80.0
 
 
@@ -103,9 +103,9 @@ def start_follower_callback(request, response):
     right_mark_count = 0
     finalization_countdown = None
 
-    # RAMPUP
-    motor_left.run(RAMPUP)
-    motor_left.run(RAMPUP)
+    # # RAMPUP
+    # motor_left.run(RAMPUP)
+    # motor_left.run(RAMPUP)
 
     print(">>", end="")
     return response
