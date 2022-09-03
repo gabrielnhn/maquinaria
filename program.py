@@ -4,7 +4,8 @@ A ROS2 node used to control a differential drive robot with a camera,
 so it follows the line in a Robotrace style track.
 You may change the parameters to your liking.
 """
-__author__ = "Gabriel Nascarella Hishida do Nascimento"
+__author__ = "Gabriel Hishida and Gabriel Pontarolo and Isadora Botassari"
+
 
 import numpy as np
 import cv2
