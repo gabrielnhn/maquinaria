@@ -36,7 +36,7 @@ MIN_AREA = 3000
 MIN_AREA_TRACK = 20000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 60.0
+LINEAR_SPEED = 69.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
@@ -242,6 +242,11 @@ def process_frame(image_input):
         # plot the line centroid on the image
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
 
+
+        # Determine the speed to turn and get the line in the center of the camera.
+        angular = float(error) * KP
+
+
     else:
         # There is no line in the image.
         # Turn on the spot to find it again.
@@ -249,8 +254,10 @@ def process_frame(image_input):
         #     just_seen_line = False
         #     error = error * LOSS_FACTOR
         if error > 0:
+            angular = 73.0 
             error = width // 2
         else:
+            angular = -73.0 
             error = -(width // 2)
 
         print("LOST.", end=" ")
@@ -274,9 +281,6 @@ def process_frame(image_input):
     else:
         just_seen_right_mark = False
 
-
-    # Determine the speed to turn and get the line in the center of the camera.
-    angular = float(error) * KP
 
     debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error}"
     print(debug_str)
