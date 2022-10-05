@@ -12,6 +12,7 @@ import time
 import signal
 import RPi.GPIO as GPIO
 from DC_Motor_pi import DC_Motor
+import requests
 
 
 # pins setup
@@ -289,9 +290,12 @@ def process_frame(image_input):
 
     global should_show
     if should_show:
-        cv2.imshow("output", output)
+        # cv2.imshow("output", output)
         # Print the image for 5milis, then resume execution
-        cv2.waitKey(5)
+        # cv2.waitKey(5)
+
+        _, imdata = cv2.imencode('.jpg', output)    
+        requests.put('http://127.0.0.1:5000/upload', data=imdata.tobytes()) # send image to webserver
 
     # Check for final countdown
     if finalization_countdown != None:
