@@ -4,7 +4,7 @@ A ROS2 node used to control a differential drive robot with a camera,
 so it follows the line in a Robotrace style track.
 You may change the parameters to your liking.
 """
-__author__ = "Gabriel Hishida and Gabriel Pontarolo"
+__author__ = "Gabriel Hishida, Gabriel Pontarolo, Tiago Serique and Isadora Botassari"
 
 import numpy as np
 import cv2
@@ -13,6 +13,7 @@ import signal
 import RPi.GPIO as GPIO
 from DC_Motor_pi import DC_Motor
 import requests
+import datetime
 
 
 # pins setup
@@ -30,21 +31,21 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 500
+MIN_AREA = 20000
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 20000
+MIN_AREA_TRACK = 60000
 
 # Robot's speed when following the line
-LINEAR_SPEED = 75.0
-RAMPUP = 80
+LINEAR_SPEED = 50.0
+LINEAR_SPEED_ON_LOSS = 30.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 KP = 10/100
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 5
+LOSS_FACTOR = 1.8
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -56,7 +57,7 @@ FINALIZATION_PERIOD = 4
 MAX_ERROR = 30
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([143,  118,  0])
+lower_bgr_values = np.array([202,  200,  191])
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -101,14 +102,6 @@ def start_follower_callback(request, response):
     should_move = True
     right_mark_count = 0
     finalization_countdown = None
-
-    # RAMP UP!!!!!!!!!!!!!!!!!!!!!
-    signal.setitimer(signal.ITIMER_REAL, 0)
-    motor_left.run(RAMPUP)
-    motor_right.run(RAMPUP)
-    time.sleep(0.5)
-
-    # signal.setitimer(signal.ITIMER_REAL, 0.1)
 
 
     print(">>", end="")
@@ -246,7 +239,8 @@ def process_frame(image_input):
         if just_seen_line:
             just_seen_line = False
             error = error * LOSS_FACTOR
-        linear = 15
+        
+        linear = LINEAR_SPEED_ON_LOSS
 
     if mark_side != None:
         # print("mark_side: {}".format(mark_side))
@@ -295,7 +289,7 @@ def process_frame(image_input):
         # cv2.waitKey(5)
 
         _, imdata = cv2.imencode('.jpg', output)    
-        requests.put('http://127.0.0.1:5000/upload', data=imdata.tobytes()) # send image to webserver
+        requests.put('http://192.168.2.159:5000/upload', data=imdata.tobytes()) # send image to webserver
 
     # Check for final countdown
     if finalization_countdown != None:
@@ -306,10 +300,14 @@ def process_frame(image_input):
             #should_move = False
             pass
 
+    print(f"LEFT: {8 + int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
+
 
     # Publish the message to 'cmd_vel'
     if should_move:
-        motor_left.run(int(linear - angular))
+
+
+        motor_left.run(8 + int(linear - angular))
         motor_right.run(int(linear + angular))
 
         print(f"left: {int(linear - angular)}, right: {int(linear + angular)}")
@@ -328,8 +326,8 @@ def main():
 
     video = cv2.VideoCapture(0)
 
-    # print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
-    # print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
+    print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
+    print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
 
     retval, image = video.read()
     print(image.shape)
@@ -342,7 +340,7 @@ def main():
 
             try:
             # ask user whether robot should move:
-                signal.setitimer(signal.ITIMER_REAL, 0.1)
+                signal.setitimer(signal.ITIMER_REAL, 0.01)
                 inp = input()
                 if inp == "start":
                     start_follower_callback(None, None)
@@ -353,11 +351,16 @@ def main():
                 if inp == "show":
                     show_callback()
 
+                if inp == "save":
+                    cv2.imwrite(f"BRUH{datetime.datetime.now()}.png", copy)
+
 
             except TimeoutError:
                 pass
 
             retval, image = video.read()
+
+            copy = image.copy()
 
         except TimeoutError:
             pass
