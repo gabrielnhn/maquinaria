@@ -8,13 +8,18 @@ __author__ = "Gabriel Hishida, Gabriel Pontarolo, Tiago Serique and Isadora Bota
 
 import numpy as np
 import cv2
-import time
 import signal
 import RPi.GPIO as GPIO
 from DC_Motor_pi import DC_Motor
 import requests
-import datetime
+from datetime import datetime
+import argparse
 
+# init arg parser
+parser = argparse.ArgumentParser()
+parser.add_argument("-s", "--start", action="store_true", help="Follow line")
+parser.add_argument("-o", "--output", metavar="address", action="store", help="Show output image to ip address")
+args = parser.parse_args()
 
 # pins setup
 clockwise_pin_1 = 11
@@ -27,6 +32,18 @@ pwm_pin_2 = 18
 
 motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
+
+
+# Global vars. initial values
+image_input = 0
+error = 0
+just_seen_line = False
+just_seen_right_mark = False
+should_move = False
+right_mark_count = 0
+finalization_countdown = None
+should_show = False
+ip_addr = "0.0.0.0"
 
 
 ## User-defined parameters: (Update these values to your liking)
@@ -72,21 +89,11 @@ def crop_size(height, width):
     #return (1*height//3, height, width//4, 3*width//4)
     return (0, height, 0, width)
 
-
-
-# Global vars. initial values
-image_input = 0
-error = 0
-just_seen_line = False
-just_seen_right_mark = False
-should_move = False
-right_mark_count = 0
-finalization_countdown = None
-should_show = False
-
 def show_callback():
     global should_show
+    global ip_addr
     should_show = True
+    ip_addr = args.output
     print("SHOWING")
     print(">>", end="")
 
@@ -283,13 +290,14 @@ def process_frame(image_input):
     #Show the output image to the user
 
     global should_show
+    global ip_addr
     if should_show:
         # cv2.imshow("output", output)
         # Print the image for 5milis, then resume execution
         # cv2.waitKey(5)
 
         _, imdata = cv2.imencode('.jpg', output)    
-        requests.put('http://192.168.2.159:5000/upload', data=imdata.tobytes()) # send image to webserver
+        requests.put(f"http://{ip_addr}:5000/upload", data=imdata.tobytes()) # send image to webserver
 
     # Check for final countdown
     if finalization_countdown != None:
@@ -334,29 +342,35 @@ def main():
 
     print(">>", end="")
 
+    if args.start:  # should start following line
+        start_follower_callback(None, None)
+
+    if args.output != None: # should show image
+        show_callback()
+
     while retval:
         try:
             process_frame(image)
 
-            try:
-            # ask user whether robot should move:
-                signal.setitimer(signal.ITIMER_REAL, 0.01)
-                inp = input()
-                if inp == "start":
-                    start_follower_callback(None, None)
+            # try:
+            # # ask user whether robot should move:
+            #     signal.setitimer(signal.ITIMER_REAL, 0.01)
+            #     inp = input()
+            #     if inp == "start":
+            #         start_follower_callback(None, None)
 
-                elif inp == "stop":
-                    stop_follower_callback(None, None)
+            #     elif inp == "stop":
+            #         stop_follower_callback(None, None)
 
-                if inp == "show":
-                    show_callback()
+            #     if inp == "show":
+            #         show_callback()
 
-                if inp == "save":
-                    cv2.imwrite(f"BRUH{datetime.datetime.now()}.png", copy)
+            #     if inp == "save":
+            #         cv2.imwrite(f"BRUH{datetime.now()}.png", copy)
 
 
-            except TimeoutError:
-                pass
+            # except TimeoutError:
+            #     pass
 
             retval, image = video.read()
 
