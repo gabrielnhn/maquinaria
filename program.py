@@ -53,7 +53,7 @@ MIN_AREA = 20000
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 60000
 
-MAX_CONTOUR_VERTICES = 90
+MAX_CONTOUR_VERTICES = 80
 
 
 # Robot's speed when following the line
@@ -77,7 +77,7 @@ FINALIZATION_PERIOD = 4
 MAX_ERROR = 30
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([202,  200,  191])
+lower_bgr_values = np.array([185,  190,  191])
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):

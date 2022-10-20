@@ -3,7 +3,7 @@ import numpy as np
 
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([202,  200,  191])
+lower_bgr_values = np.array([185,  190,  191])
 upper_bgr_values = np.array([255, 255, 255])
 
 
@@ -84,7 +84,7 @@ def get_contour_data(mask, out):
 
 
 
-image_path = "oi.png"
+image_path = "zap3.jpeg"
 
 image = cv2.imread(image_path)
 
