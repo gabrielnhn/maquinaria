@@ -53,6 +53,9 @@ MIN_AREA = 20000
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 60000
 
+MAX_CONTOUR_VERTICES = 80
+
+
 # Robot's speed when following the line
 LINEAR_SPEED = 50.0
 LINEAR_SPEED_ON_LOSS = 30.0
@@ -74,7 +77,7 @@ FINALIZATION_PERIOD = 4
 MAX_ERROR = 30
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([202,  200,  191])
+lower_bgr_values = np.array([185,  190,  191])
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -136,52 +139,83 @@ def get_contour_data(mask, out):
     (If there are any of these contours),
     and draw all contours on 'out' image
     """
+
+    # erode image (filter excessive brightness noise)
+    kernel = np.ones((5, 5), np.uint8)
+    mask = cv2.erode(mask, kernel, iterations=1)
+
+
     # get a list of contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
     mark = {}
     line = {}
+    over = False
+    tried_once = False
 
-    for contour in contours:
+    while not over:
 
-        M = cv2.moments(contour)
-        # Search more about Image Moments on Wikipedia :)
+        for contour in contours:
+            contour_vertices = len(cv2.approxPolyDP(contour, 3.0, True))
 
-        if M['m00'] > MIN_AREA:
-        # if countor.area > MIN_AREA:
+            if contour_vertices > MAX_CONTOUR_VERTICES:
+                continue
 
-            if (M['m00'] > MIN_AREA_TRACK):
-                # Contour is part of the track
-                line['x'] = crop_w_start + int(M["m10"]/M["m00"])
-                line['y'] = int(M["m01"]/M["m00"])
 
-                # plot the area in light blue
-                cv2.drawContours(out, contour, -1, (255,255,0), 1)
-                cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                    cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
+            M = cv2.moments(contour)
+            # Search more about Image Moments on Wikipedia :)
 
-            else:
-                # Contour is a track mark
-                if (not mark) or (mark['y'] > int(M["m01"]/M["m00"])):
-                    # if there are more than one mark, consider only
-                    # the one closest to the robot
-                    mark['y'] = int(M["m01"]/M["m00"])
-                    mark['x'] = crop_w_start + int(M["m10"]/M["m00"])
+            if M['m00'] > MIN_AREA:
+            # if countor.area > MIN_AREA:
 
-                    # plot the area in pink
-                    cv2.drawContours(out, contour, -1, (255,0,255), 1)
+                if (M['m00'] > MIN_AREA_TRACK):
+                    # Contour is part of the track
+                    line['x'] = crop_w_start + int(M["m10"]/M["m00"])
+                    line['y'] = int(M["m01"]/M["m00"])
+
+                    # plot the area in light blue
+                    cv2.drawContours(out, contour, -1, (255,255,0), 1)
                     cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                        cv2.FONT_HERSHEY_PLAIN, 2, (255,0,255), 2)
+                        cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
+
+                else:
+                    # Contour is a track mark
+                    if (not mark) or (mark['y'] > int(M["m01"]/M["m00"])):
+                        # if there are more than one mark, consider only
+                        # the one closest to the robot
+                        mark['y'] = int(M["m01"]/M["m00"])
+                        mark['x'] = crop_w_start + int(M["m10"]/M["m00"])
+
+                        # plot the area in pink
+                        cv2.drawContours(out, contour, -1, (255,0,255), 1)
+                        cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                            cv2.FONT_HERSHEY_PLAIN, 2, (255,0,255), 2)
 
 
-    if mark and line:
-    # if both contours exist
-        if mark['x'] > line['x']:
-            mark_side = "right"
+        if mark and line:
+        # if both contours exist
+            if mark['x'] > line['x']:
+                mark_side = "right"
+            else:
+                mark_side = "left"
         else:
-            mark_side = "left"
-    else:
-        mark_side = None
+            mark_side = None
+
+        if line:
+            over = True
+
+        # Did not find the line. Try eroding more?
+        elif not tried_once:
+            mask = cv2.erode(mask, kernel, iterations=7)
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
+            tried_once = True
+
+        # Did not find anything
+        else:
+        
+            over = True
+
+
 
 
     return (line, mark_side)
@@ -214,6 +248,8 @@ def process_frame(image_input):
     # get a binary picture, where non-zero values represent the line.
     # (filter the color values so only the contour is seen)
     mask = cv2.inRange(crop, lower_bgr_values, upper_bgr_values)
+
+    
 
     # get the centroid of the biggest contour in the picture,
     # and plot its detail on the cropped part of the output image
