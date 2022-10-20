@@ -53,7 +53,7 @@ MIN_AREA = 20000
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 60000
 
-MAX_CONTOUR_VERTICES = 50
+MAX_CONTOUR_VERTICES = 90
 
 
 # Robot's speed when following the line
