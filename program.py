@@ -26,8 +26,8 @@ clockwise_pin_1 = 11
 counterclockwise_pin_1 = 13
 pwm_pin_1 = 12
 
-clockwise_pin_2 = 15
-counterclockwise_pin_2 = 16
+clockwise_pin_2 = 16
+counterclockwise_pin_2 = 15
 pwm_pin_2 = 18
 
 motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
@@ -45,13 +45,12 @@ finalization_countdown = None
 should_show = False
 ip_addr = "0.0.0.0"
 
-
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
 MIN_AREA = 20000
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 60000
+MIN_AREA_TRACK = 40000
 
 MAX_CONTOUR_VERTICES = 80
 
@@ -344,14 +343,17 @@ def process_frame(image_input):
             #should_move = False
             pass
 
-    print(f"LEFT: {8 + int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
+    # print(f"LEFT: {8 + int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
+    print(f"LEFT: { int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
+
 
 
     # Publish the message to 'cmd_vel'
     if should_move:
 
 
-        motor_left.run(8 + int(linear - angular))
+        # motor_left.run(8 + int(linear - angular))
+        motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
 
         print(f"left: {int(linear - angular)}, right: {int(linear + angular)}")
