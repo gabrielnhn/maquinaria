@@ -51,20 +51,24 @@ MIN_AREA = 20000
 
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 40000
+MIN_AREA_TRACK = 20000
+
 
 MAX_CONTOUR_VERTICES = 80
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 50.0
-LINEAR_SPEED_ON_LOSS = 30.0
+LINEAR_SPEED = 32.0
+LINEAR_SPEED_ON_LOSS = 25.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 10/100
+KP = 5/100
+# KP = 3/100
+
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1.8
+LOSS_FACTOR = 1.2
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -372,8 +376,8 @@ def main():
 
     video = cv2.VideoCapture(0)
 
-    print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
-    print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
+    # print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
+    # print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
 
     retval, image = video.read()
     print(image.shape)
@@ -412,7 +416,7 @@ def main():
 
             retval, image = video.read()
 
-            copy = image.copy()
+            # copy = image.copy()
 
         except TimeoutError:
             pass
