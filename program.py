@@ -6,6 +6,7 @@ You may change the parameters to your liking.
 """
 __author__ = "Gabriel Hishida, Gabriel Pontarolo, Tiago Serique and Isadora Botassari"
 
+from codecs import latin_1_encode
 import numpy as np
 import cv2
 import signal
@@ -52,6 +53,8 @@ MIN_AREA = 20000
 # Minimum size for a contour to be considered part of the track
 MIN_AREA_TRACK = 40000
 MIN_AREA_TRACK = 20000
+
+COUNTOUR_SIZE_FACTOR = 3
 
 
 MAX_CONTOUR_VERTICES = 80
@@ -219,9 +222,8 @@ def get_contour_data(mask, out):
             over = True
 
 
-
-
     return (line, mark_side)
+
 
 def process_frame(image_input):
     """
@@ -239,6 +241,7 @@ def process_frame(image_input):
 
 
     height, width, _ = image_input.shape
+    in_line = False
 
     image = image_input
 
@@ -266,14 +269,18 @@ def process_frame(image_input):
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
         x = line['x']
+        cx = width//2
 
         # error:= The difference between the center of the image
         # and the center of the line
-        error = x - width//2
+        error = x - cx
         # print(f"x: {x}, error {error}")
 
         linear = LINEAR_SPEED
         just_seen_line = True
+
+        # check if image center is inside a square around the line center
+        in_line = ((cx > (x - width//COUNTOUR_SIZE_FACTOR*2)) and (cx < (x + width//COUNTOUR_SIZE_FACTOR*2)))
 
         # plot the line centroid on the image
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
@@ -310,8 +317,12 @@ def process_frame(image_input):
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
 
-    debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error}"
+    debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error} | In Line: {in_line}"
     print(debug_str)
+
+    # if image center is inside the contour, angular = 0
+    if in_line:
+        angular = 0.0
 
     text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
     text_w, text_h = text_size
