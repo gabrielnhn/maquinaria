@@ -267,6 +267,8 @@ def process_frame(image_input):
 
     # message = Twist()
 
+    x = None
+
     if line:
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
@@ -334,7 +336,8 @@ def process_frame(image_input):
     cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
 
     # plot the rectangle around contour center
-    cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+    if x:
+        cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
     
     # center of the image
     cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 7)
