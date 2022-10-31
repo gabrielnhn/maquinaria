@@ -170,7 +170,6 @@ def get_contour_data(mask, out):
             M = cv2.moments(contour)
             # Search more about Image Moments on Wikipedia :)
 
-            _,_,w,_ = cv2.boundingRect(contour)
 
             if M['m00'] > MIN_AREA:
             # if countor.area > MIN_AREA:
@@ -179,7 +178,6 @@ def get_contour_data(mask, out):
                     # Contour is part of the track
                     line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                     line['y'] = int(M["m01"]/M["m00"])
-                    line['w'] = w
 
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
@@ -283,7 +281,7 @@ def process_frame(image_input):
         just_seen_line = True
 
         # check if image center is inside a square around the line center
-        in_line = ((cx > (x - (line["w"]//2))) and (cx < (x + (line["w"]//2))))
+        in_line = ((cx > (x - width//CTR_CENTER_SIZE_FACTOR)) and (cx < (x + width//CTR_CENTER_SIZE_FACTOR)))
 
         # plot the line centroid on the image
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
