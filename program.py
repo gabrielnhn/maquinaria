@@ -54,8 +54,7 @@ MIN_AREA = 20000
 MIN_AREA_TRACK = 40000
 MIN_AREA_TRACK = 20000
 
-COUNTOUR_SIZE_FACTOR = 3
-
+CTR_CENTER_SIZE_FACTOR = 10
 
 MAX_CONTOUR_VERTICES = 80
 
@@ -171,6 +170,8 @@ def get_contour_data(mask, out):
             M = cv2.moments(contour)
             # Search more about Image Moments on Wikipedia :)
 
+            _,_,w,_ = cv2.boundingRect(contour)
+
             if M['m00'] > MIN_AREA:
             # if countor.area > MIN_AREA:
 
@@ -178,6 +179,7 @@ def get_contour_data(mask, out):
                     # Contour is part of the track
                     line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                     line['y'] = int(M["m01"]/M["m00"])
+                    line['w'] = w
 
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
@@ -248,6 +250,8 @@ def process_frame(image_input):
     global crop_w_start
     crop_h_start, crop_h_stop, crop_w_start, crop_w_stop = crop_size(height, width)
 
+    cx = width//2
+
     # get the bottom part of the image (matrix slicing)
     crop = image[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop]
 
@@ -269,7 +273,6 @@ def process_frame(image_input):
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
         x = line['x']
-        cx = width//2
 
         # error:= The difference between the center of the image
         # and the center of the line
@@ -280,7 +283,7 @@ def process_frame(image_input):
         just_seen_line = True
 
         # check if image center is inside a square around the line center
-        in_line = ((cx > (x - width//COUNTOUR_SIZE_FACTOR*2)) and (cx < (x + width//COUNTOUR_SIZE_FACTOR*2)))
+        in_line = ((cx > (x - (line["w"]//2))) and (cx < (x + (line["w"]//2))))
 
         # plot the line centroid on the image
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
@@ -317,21 +320,29 @@ def process_frame(image_input):
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
 
-    debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error} | In Line: {in_line}"
-    print(debug_str)
-
     # if image center is inside the contour, angular = 0
     if in_line:
         angular = 0.0
 
+    debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error} | In Line: {in_line}"
+    print(debug_str)
+
     text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
     text_w, text_h = text_size
     cv2.rectangle(output, (0, 90), (text_w, 110 + text_h), (255,255,255), -1)
-    cv2.putText(output, debug_str, (0, 100 + text_h + 2 - 1), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
 
 
     # Plot the boundaries where the image was cropped
     cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
+
+    # plot the rectangle around contour center
+    cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+    
+    # center of the image
+    cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 7)
+
+    cv2.putText(output, debug_str, (0, 100 + text_h + 2 - 1), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+    
     # Uncomment to show the binary picture
     #cv2.imshow("mask", mask)
 
@@ -449,5 +460,5 @@ finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
-    # video.close()
+    #video.close()
 
