@@ -48,24 +48,30 @@ ip_addr = "0.0.0.0"
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
-MIN_AREA = 20000
+# MIN_AREA = 20000
+MIN_AREA = 200
+
 
 # Minimum size for a contour to be considered part of the track
-MIN_AREA_TRACK = 40000
-MIN_AREA_TRACK = 20000
+# MIN_AREA_TRACK = 40000
+# MIN_AREA_TRACK = 20000
 
-CTR_CENTER_SIZE_FACTOR = 10
+MIN_AREA_TRACK = 400
+
+# CTR_CENTER_SIZE_FACTOR = 10 
+CTR_CENTER_SIZE_FACTOR = 1 
+
 
 MAX_CONTOUR_VERTICES = 80
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 32.0
-LINEAR_SPEED_ON_LOSS = 25.0
+LINEAR_SPEED = 27.0
+LINEAR_SPEED_ON_LOSS = 23.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 5/100
+KP = 30/100
 # KP = 3/100
 
 
@@ -321,8 +327,8 @@ def process_frame(image_input):
     angular = float(error) * -KP
 
     # if image center is inside the contour, angular = 0
-    if in_line:
-        angular = 0.0
+    # if in_line:
+    #     angular = 0.0
 
     debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error} | In Line: {in_line}"
     print(debug_str)
@@ -399,11 +405,12 @@ def main():
 
     video = cv2.VideoCapture(0)
 
-    # print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
-    # print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
+    print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
+    print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
 
     retval, image = video.read()
     print(image.shape)
+    height, width, _ = image.shape
 
     print(">>", end="")
 
@@ -413,8 +420,13 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
+    RESIZE_SIZE = 13
+
+
     while retval:
         try:
+
+            image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
             process_frame(image)
 
             # try:
