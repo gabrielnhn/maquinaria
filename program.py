@@ -54,7 +54,8 @@ MIN_AREA = 20000
 MIN_AREA_TRACK = 40000
 MIN_AREA_TRACK = 20000
 
-CTR_CENTER_SIZE_FACTOR = 10
+CENTER_RECT_SIZE = 100
+CENTER_WHITE_TRSH = 200
 
 MAX_CONTOUR_VERTICES = 80
 
@@ -170,8 +171,6 @@ def get_contour_data(mask, out):
             M = cv2.moments(contour)
             # Search more about Image Moments on Wikipedia :)
 
-            _,_,w,_ = cv2.boundingRect(contour)
-
             if M['m00'] > MIN_AREA:
             # if countor.area > MIN_AREA:
 
@@ -179,7 +178,6 @@ def get_contour_data(mask, out):
                     # Contour is part of the track
                     line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                     line['y'] = int(M["m01"]/M["m00"])
-                    line['w'] = w
 
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
@@ -226,6 +224,17 @@ def get_contour_data(mask, out):
 
     return (line, mark_side)
 
+def is_center_white(mask, height, width):
+    """
+    Uses the mask to check if 'CENTER_RECT_SIZE' sized square at 
+    the center of the image is bellow 'CENTER_WHITE_TRSH'
+    """
+    roi_values = mask[(height-CENTER_RECT_SIZE)//2:(height+CENTER_RECT_SIZE)//2,(width-CENTER_RECT_SIZE)//2:(width+CENTER_RECT_SIZE)//2]
+    mean = np.mean(roi_values[0,:])
+
+    print(mean)
+
+    return (mean > CENTER_WHITE_TRSH)
 
 def process_frame(image_input):
     """
@@ -281,9 +290,9 @@ def process_frame(image_input):
 
         linear = LINEAR_SPEED
         just_seen_line = True
+        in_line = is_center_white(mask, height, width)
 
         # check if image center is inside a square around the line center
-        in_line = ((cx > (x - (line["w"]//2))) and (cx < (x + (line["w"]//2))))
 
         # plot the line centroid on the image
         cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
@@ -331,12 +340,11 @@ def process_frame(image_input):
     text_w, text_h = text_size
     cv2.rectangle(output, (0, 90), (text_w, 110 + text_h), (255,255,255), -1)
 
+    # plot the boundaries of the center rectangle
+    cv2.rectangle(output, ((width-CENTER_RECT_SIZE)//2, (height-CENTER_RECT_SIZE)//2), ((width+CENTER_RECT_SIZE)//2, (height+CENTER_RECT_SIZE)//2), (0,0,255), 2)
 
     # Plot the boundaries where the image was cropped
     cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
-
-    # plot the rectangle around contour center
-    cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
     
     # center of the image
     cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 7)
@@ -378,7 +386,6 @@ def process_frame(image_input):
     if should_move:
 
 
-        # motor_left.run(8 + int(linear - angular))
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
 
