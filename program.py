@@ -66,8 +66,8 @@ MAX_CONTOUR_VERTICES = 80
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 27.0
-LINEAR_SPEED_ON_LOSS = 23.0
+LINEAR_SPEED = 25.0
+LINEAR_SPEED_ON_LOSS = 0.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
@@ -76,7 +76,7 @@ KP = 30/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1.2
+LOSS_FACTOR = 2.7
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -292,7 +292,7 @@ def process_frame(image_input):
         in_line = ((cx > (x - width//CTR_CENTER_SIZE_FACTOR)) and (cx < (x + width//CTR_CENTER_SIZE_FACTOR)))
 
         # plot the line centroid on the image
-        cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
+        cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 1)
 
     else:
         print("LOST", end=". ")
@@ -346,7 +346,7 @@ def process_frame(image_input):
         cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
     
     # center of the image
-    cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 7)
+    cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 1)
 
     cv2.putText(output, debug_str, (0, 100 + text_h + 2 - 1), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
     
@@ -388,8 +388,6 @@ def process_frame(image_input):
         # motor_left.run(8 + int(linear - angular))
         motor_left.run(int(linear - angular))
         motor_right.run(int(linear + angular))
-
-        print(f"left: {int(linear - angular)}, right: {int(linear + angular)}")
         # print(linear, angular)
     else:
         motor_left.stop()
