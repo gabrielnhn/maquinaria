@@ -49,14 +49,13 @@ ip_addr = "0.0.0.0"
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
 # MIN_AREA = 20000
-MIN_AREA = 200
+MIN_AREA = 80
 
 
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
 # MIN_AREA_TRACK = 20000
-
-MIN_AREA_TRACK = 400
+MIN_AREA_TRACK = 120
 
 # CTR_CENTER_SIZE_FACTOR = 10 
 CTR_CENTER_SIZE_FACTOR = 1 
@@ -66,17 +65,17 @@ MAX_CONTOUR_VERTICES = 80
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 25.0
+LINEAR_SPEED = 35.0
 LINEAR_SPEED_ON_LOSS = 0.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 30/100
+KP = 35/100
 # KP = 3/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 2.7
+LOSS_FACTOR = 2.87
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -86,6 +85,9 @@ FINALIZATION_PERIOD = 4
 
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
+
+RESIZE_SIZE = 10
+
 
 # BGR values to filter only the selected color range
 lower_bgr_values = np.array([185,  190,  191])
@@ -188,7 +190,7 @@ def get_contour_data(mask, out):
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
                     cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                        cv2.FONT_HERSHEY_PLAIN, 2, (255,255,0), 2)
+                        cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,255,0), 1)
 
                 else:
                     # Contour is a track mark
@@ -201,7 +203,7 @@ def get_contour_data(mask, out):
                         # plot the area in pink
                         cv2.drawContours(out, contour, -1, (255,0,255), 1)
                         cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                            cv2.FONT_HERSHEY_PLAIN, 2, (255,0,255), 2)
+                            cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,0,255), 2)
 
 
         if mark and line:
@@ -292,7 +294,9 @@ def process_frame(image_input):
         in_line = ((cx > (x - width//CTR_CENTER_SIZE_FACTOR)) and (cx < (x + width//CTR_CENTER_SIZE_FACTOR)))
 
         # plot the line centroid on the image
-        cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 1)
+        # cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
+        cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
+
 
     else:
         print("LOST", end=". ")
@@ -346,7 +350,8 @@ def process_frame(image_input):
         cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
     
     # center of the image
-    cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 1)
+    # cv2.circle(output, (cx, crop_h_start + (height//2)), 5//RESIZE_SIZE, (75,0,130), 7//RESIZE_SIZE)
+    cv2.circle(output, (cx, crop_h_start + (height//2)), 1, (75,0,130), 1)
 
     cv2.putText(output, debug_str, (0, 100 + text_h + 2 - 1), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
     
@@ -403,8 +408,8 @@ def main():
 
     video = cv2.VideoCapture(0)
 
-    print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
-    print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
+    # print(video.set(cv2.CAP_PROP_FRAME_WIDTH, 1920))
+    # print(video.set(cv2.CAP_PROP_FRAME_HEIGHT, 1080))
 
     retval, image = video.read()
     print(image.shape)
@@ -418,7 +423,6 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
-    RESIZE_SIZE = 13
 
 
     while retval:
