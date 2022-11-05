@@ -19,6 +19,7 @@ import argparse
 # init arg parser
 parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--start", action="store_true", help="Follow line")
+parser.add_argument("-r", "--record", action="store_true", help="Record masked image")
 parser.add_argument("-o", "--output", metavar="address", action="store", help="Show output image to ip address")
 args = parser.parse_args()
 
@@ -43,7 +44,9 @@ just_seen_right_mark = False
 should_move = False
 right_mark_count = 0
 finalization_countdown = None
+should_record = False
 should_show = False
+record_writer = None
 ip_addr = "0.0.0.0"
 
 ## User-defined parameters: (Update these values to your liking)
@@ -112,6 +115,20 @@ def show_callback():
     ip_addr = args.output
     print("SHOWING")
     print(">>", end="")
+
+def record_callback(width, height):
+    global should_record
+    global record_writer
+    should_record = True
+    record_writer = cv2.VideoWriter(f"output-{datetime.now()}.mp4", cv2.VideoWriter_fourcc(*"MP4V"), 25, (width, height))
+    print("RECORDING")
+    print(">>", end="")
+
+def end_record():
+    global should_record
+    global record_writer
+    if should_record:
+        record_writer.release()
 
 def start_follower_callback(request, response):
     """
@@ -295,7 +312,7 @@ def process_frame(image_input):
 
         # plot the line centroid on the image
         # cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
-        cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
+        
 
 
     else:
@@ -334,43 +351,45 @@ def process_frame(image_input):
     # if in_line:
     #     angular = 0.0
 
-    debug_str = f"Angular: {int(angular)} | Linear: {linear} | Error: {error} | In Line: {in_line}"
-    print(debug_str)
+    now = f"{datetime.now()}"
+    debug_str = f"Ang: {int(angular)}|Lin: {linear}|Err: {error}"
 
-    text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
-    text_w, text_h = text_size
-    cv2.rectangle(output, (0, 90), (text_w, 110 + text_h), (255,255,255), -1)
+    #Show the output image to the user
 
-
-    # Plot the boundaries where the image was cropped
-    cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
-
-    # plot the rectangle around contour center
-    if x:
-        cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+    global should_record
+    global should_show
+    global ip_addr
+    global record_writer
     
-    # center of the image
-    # cv2.circle(output, (cx, crop_h_start + (height//2)), 5//RESIZE_SIZE, (75,0,130), 7//RESIZE_SIZE)
-    cv2.circle(output, (cx, crop_h_start + (height//2)), 1, (75,0,130), 1)
+    if should_record or should_show:
+        text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
+        text_w, text_h = text_size
 
-    cv2.putText(output, debug_str, (0, 100 + text_h + 2 - 1), cv2.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2)
+        cv2.rectangle(output, (0, 90), (text_w, 110 + text_h), (255,255,255), -1)
+        # Plot the boundaries where the image was cropped
+        cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
+        # center of the image
+        cv2.circle(output, (cx, crop_h_start + (height//2)), 1, (75,0,130), 1)
+        cv2.putText(output, now, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (255, 0, 0), 1)
+        cv2.putText(output, debug_str, (0, text_h), cv2.FONT_HERSHEY_PLAIN, 0.5, (255, 0, 0), 1)
+        # plot the rectangle around contour center
+        if x:
+            cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
+            cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+
+        if should_show:
+            # cv2.imshow("output", output)
+            # Print the image for 5milis, then resume execution
+            # cv2.waitKey(5)
+            _, imdata = cv2.imencode('.jpg', output)    
+            requests.put(f"http://{ip_addr}:5000/upload", data=imdata.tobytes()) # send image to webserver
+
+        if should_record:
+            record_writer.write(output)
     
     # Uncomment to show the binary picture
     #cv2.imshow("mask", mask)
 
-
-
-    #Show the output image to the user
-
-    global should_show
-    global ip_addr
-    if should_show:
-        # cv2.imshow("output", output)
-        # Print the image for 5milis, then resume execution
-        # cv2.waitKey(5)
-
-        _, imdata = cv2.imencode('.jpg', output)    
-        requests.put(f"http://{ip_addr}:5000/upload", data=imdata.tobytes()) # send image to webserver
 
     # Check for final countdown
     if finalization_countdown != None:
@@ -381,9 +400,8 @@ def process_frame(image_input):
             #should_move = False
             pass
 
-    # print(f"LEFT: {8 + int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
-    print(f"LEFT: { int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
 
+    print(f"{now}\n{debug_str}\nLEFT: { int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
 
 
     # Publish the message to 'cmd_vel'
@@ -419,6 +437,9 @@ def main():
 
     if args.start:  # should start following line
         start_follower_callback(None, None)
+
+    if args.record: # should record image
+        record_callback(width//RESIZE_SIZE, height//RESIZE_SIZE)
 
     if args.output != None: # should show image
         show_callback()
@@ -459,6 +480,7 @@ def main():
             pass
 
     GPIO.cleanup()
+    end_record()
     print("Exiting...")
 
 
@@ -466,6 +488,7 @@ try:
     main()
 
 except KeyboardInterrupt:
+    end_record()
     print("\nExiting...")
 
 except Exception as e:
@@ -475,5 +498,5 @@ finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
-    #video.close()
+    video.close()
 
