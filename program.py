@@ -498,5 +498,5 @@ finally:
     del motor_left
     del motor_right
     GPIO.cleanup()
-    video.close()
+    #video.close()
 
