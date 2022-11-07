@@ -120,7 +120,7 @@ def record_callback(width, height):
     global should_record
     global record_writer
     should_record = True
-    record_writer = cv2.VideoWriter(f"output-{datetime.now()}.mp4", cv2.VideoWriter_fourcc(*"MP4V"), 25, (width, height))
+    record_writer = cv2.VideoWriter(f"output-{datetime.now()}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 25, (width, height))
     print("RECORDING")
     print(">>", end="")
 
