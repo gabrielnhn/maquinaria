@@ -64,16 +64,16 @@ MIN_AREA_TRACK = 120
 CTR_CENTER_SIZE_FACTOR = 1 
 
 
-MAX_CONTOUR_VERTICES = 80
+MAX_CONTOUR_VERTICES = 45
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 35.0
+LINEAR_SPEED = 32.0
 LINEAR_SPEED_ON_LOSS = 0.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 35/100
+KP = 40/100
 # KP = 3/100
 
 
@@ -93,7 +93,9 @@ RESIZE_SIZE = 7
 
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([185,  190,  191])
+# lower_bgr_values = np.array([185,  190,  191])
+lower_bgr_values = np.array([200,  200,  200])
+
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -210,7 +212,7 @@ def get_contour_data(mask, out):
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
                     cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                        cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,255,0), 1)
+                        cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
 
                 else:
                     # Contour is a track mark
