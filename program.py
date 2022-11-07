@@ -89,7 +89,7 @@ FINALIZATION_PERIOD = 4
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
 
-RESIZE_SIZE = 10
+RESIZE_SIZE = 7
 
 
 # BGR values to filter only the selected color range
@@ -106,7 +106,10 @@ def crop_size(height, width):
     ## Update these values to your liking.
 
     #return (1*height//3, height, width//4, 3*width//4)
-    return (0, height, 0, width)
+    # return (0, height, 0, width)
+    # return (2*height//5, height, 0, width)
+    return (0, 3*height//5, 0, width)
+
 
 def show_callback():
     global should_show

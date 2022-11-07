@@ -101,7 +101,10 @@ def crop_size(height, width):
     ## Update these values to your liking.
 
     #return (1*height//3, height, width//4, 3*width//4)
-    return (0, height, 0, width)
+    # return (2*height//5, height, 0, width)
+    return (0, 3*height//5, 0, width)
+
+    # return (0, height, 0, width)
 
 def show_callback():
     global should_show
@@ -342,8 +345,8 @@ def process_frame(image_input):
     cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
 
     # plot the rectangle around contour center
-    if x:
-        cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+    # if x:
+    #     cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
     
     # center of the image
     cv2.circle(output, (cx, crop_h_start + (height//2)), 5, (75,0,130), 1)
@@ -422,7 +425,7 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
-    RESIZE_SIZE = 13
+    RESIZE_SIZE = 7
     RESIZE_SIZE = 1
 
 
