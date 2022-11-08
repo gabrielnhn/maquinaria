@@ -72,6 +72,9 @@ MAX_CONTOUR_VERTICES = 45
 LINEAR_SPEED = 20.0
 LINEAR_SPEED_ON_LOSS = 13.0
 
+# mininum speed to keep the robot
+MIN_SPEED = 15
+
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 KP = 33/100
@@ -266,7 +269,6 @@ def process_frame(image_input):
     so it can follow the contour
     """
 
-
     global error
     global just_seen_line
     global just_seen_right_mark
@@ -274,6 +276,8 @@ def process_frame(image_input):
     global right_mark_count
     global finalization_countdown
 
+    v_left = 0  # left motor resulting speed
+    v_right = 0 # right motor resulting speed
 
     height, width, _ = image_input.shape
     in_line = False
@@ -292,7 +296,6 @@ def process_frame(image_input):
     # (filter the color values so only the contour is seen)
     mask = cv2.inRange(crop, lower_bgr_values, upper_bgr_values)
 
-    
 
     # get the centroid of the biggest contour in the picture,
     # and plot its detail on the cropped part of the output image
@@ -323,7 +326,6 @@ def process_frame(image_input):
         # plot the line centroid on the image
         # cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
         
-
 
     else:
         print("LOST", end=". ")
@@ -357,12 +359,16 @@ def process_frame(image_input):
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
 
+    # result speed
+    v_left = int(linear - angular)
+    v_right = int(linear + angular)
+
     # if image center is inside the contour, angular = 0
     # if in_line:
     #     angular = 0.0
 
     now = f"{datetime.now()}"
-    debug_str = f"Ang: {int(angular)}|Lin: {linear}|Err: {error}"
+    debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
 
     #Show the output image to the user
 
@@ -411,21 +417,26 @@ def process_frame(image_input):
             #should_move = False
             pass
 
-
-    print(f"{now}\n{debug_str}\nLEFT: { int(linear - angular)} |  RIGHT: {int(linear + angular)}\n --- \n")
-
-
     # Publish the message to 'cmd_vel'
+    print(f"{now}\n{debug_str}\nLEFT: { v_left} |  RIGHT: {v_right}\n --- \n")
+
+
     if should_move:
+        if (v_left > MIN_SPEED or v_right > MIN_SPEED):
+            rampup()
 
-
-        # motor_left.run(8 + int(linear - angular))
-        motor_left.run(int(linear - angular))
-        motor_right.run(int(linear + angular))
-        # print(linear, angular)
+        motor_left.run(v_left)
+        motor_right.run(v_right)
     else:
         motor_left.stop()
         motor_right.stop()
+
+        
+
+def rampup():
+    motor_left.run(40)
+    motor_right.run(40)
+    time.sleep(0.1)
 
 
 def timeout(signum, frame):
@@ -456,9 +467,7 @@ def main():
         show_callback()
 
     if should_move:
-        motor_left.run(40)
-        motor_right.run(40)
-        time.sleep(0.1)
+        rampup()
 
 
     while retval:
@@ -467,29 +476,8 @@ def main():
             image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
             process_frame(image)
 
-            # try:
-            # # ask user whether robot should move:
-            #     signal.setitimer(signal.ITIMER_REAL, 0.01)
-            #     inp = input()
-            #     if inp == "start":
-            #         start_follower_callback(None, None)
-
-            #     elif inp == "stop":
-            #         stop_follower_callback(None, None)
-
-            #     if inp == "show":
-            #         show_callback()
-
-            #     if inp == "save":
-            #         cv2.imwrite(f"BRUH{datetime.now()}.png", copy)
-
-
-            # except TimeoutError:
-            #     pass
-
             retval, image = video.read()
 
-            # copy = image.copy()
 
         except TimeoutError:
             pass
