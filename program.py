@@ -6,7 +6,6 @@ You may change the parameters to your liking.
 """
 __author__ = "Gabriel Hishida, Gabriel Pontarolo, Tiago Serique and Isadora Botassari"
 
-from codecs import latin_1_encode
 import numpy as np
 import cv2
 import signal
@@ -120,7 +119,6 @@ def crop_size(height, width):
     return (1*height//3, height, 0, width)
 
 
-
 def show_callback():
     global should_show
     global ip_addr
@@ -133,7 +131,7 @@ def record_callback(width, height):
     global should_record
     global record_writer
     should_record = True
-    record_writer = cv2.VideoWriter(f"output-{datetime.now()}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 25, (width, height))
+    record_writer = cv2.VideoWriter(f"out-{datetime.now().minute}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 25, (width, height))
     print("RECORDING")
     print(">>", end="")
 
@@ -367,7 +365,7 @@ def process_frame(image_input):
     # if in_line:
     #     angular = 0.0
 
-    now = f"{datetime.now()}"
+    now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
 
     #Show the output image to the user
@@ -430,8 +428,7 @@ def process_frame(image_input):
     else:
         motor_left.stop()
         motor_right.stop()
-
-        
+    
 
 def rampup():
     motor_left.run(40)
