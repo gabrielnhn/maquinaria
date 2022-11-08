@@ -68,17 +68,17 @@ MAX_CONTOUR_VERTICES = 45
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 32.0
+LINEAR_SPEED = 31.0
 LINEAR_SPEED_ON_LOSS = 0.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 25/100
+KP = 33/100
 # KP = 3/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 2.87
+LOSS_FACTOR = 1.6
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -112,7 +112,9 @@ def crop_size(height, width):
     #return (1*height//3, height, width//4, 3*width//4)
     # return (0, height, 0, width)
     # return (2*height//5, height, 0, width)
-    return (0, 3*height//5, 0, width)
+    # return (0, 3*height//5, 0, width)
+    return (1*height//3, height, 0, width)
+
 
 
 def show_callback():
