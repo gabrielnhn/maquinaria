@@ -426,7 +426,7 @@ def process_frame(image_input, last_res_v):
         
 
     # if speed of the last iteration is <= than MIN_SPEED
-       # and the current is > last
+    # and the current > last
 
         if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]):
             left_should_rampup = True
@@ -434,28 +434,16 @@ def process_frame(image_input, last_res_v):
         if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]):
             right_should_rampup = True
 
-        if left_should_rampup and not right_should_rampup:
-            motor_right.run(res_v["right"])
+
+        if left_should_rampup:
             motor_left.run(40)
-            time.sleep(0.1)
-            motor_left.run(res_v["left"])
-
-        elif right_should_rampup and not left_should_rampup:
-            motor_left.run(res_v["left"])
+        if right_should_rampup:
             motor_right.run(40)
+        if left_should_rampup or right_should_rampup:
             time.sleep(0.1)
-            motor_right.run(res_v["right"])
-
-        elif left_should_rampup and right_should_rampup:
-            motor_right.run(40)
-            motor_left.run(40)
-            time.sleep(0.1)
-            motor_left.run(res_v["left"])
-            motor_right.run(res_v["right"])
-
-        else:
-            motor_left.run(res_v["left"])
-            motor_right.run(res_v["right"])
+            
+        motor_left.run(res_v["left"])
+        motor_right.run(res_v["right"])
 
 
 
