@@ -421,13 +421,45 @@ def process_frame(image_input, last_res_v):
     print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}\n --- \n")
 
     if should_move:
+        left_should_rampup = False
+        right_should_rampup = False
+        
 
-        if (last_res_v["left"] <= MIN_SPEED or last_res_v["right"] <= MIN_SPEED): # if speed of the last iteration is <= than MIN_SPEED
-            if (res_v["left"] > last_res_v["left"] or res_v["right"] > last_res_v["right"]):   # and the current is > last
-                rampup()
+    # if speed of the last iteration is <= than MIN_SPEED
+       # and the current is > last
 
-        motor_left.run(res_v["left"])
-        motor_right.run(res_v["right"])
+        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]):
+            left_should_rampup = True
+
+        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]):
+            right_should_rampup = True
+
+        if left_should_rampup and not right_should_rampup:
+            motor_right.run(res_v["right"])
+            motor_left.run(40)
+            time.sleep(0.1)
+            motor_left.run(res_v["left"])
+
+        elif right_should_rampup and not left_should_rampup:
+            motor_left.run(res_v["left"])
+            motor_right.run(40)
+            time.sleep(0.1)
+            motor_right.run(res_v["right"])
+
+        elif left_should_rampup and right_should_rampup:
+            motor_right.run(40)
+            motor_left.run(40)
+            time.sleep(0.1)
+            motor_left.run(res_v["left"])
+            motor_right.run(res_v["right"])
+
+        else:
+            motor_left.run(res_v["left"])
+            motor_right.run(res_v["right"])
+
+
+
+    
     else:
         motor_left.stop()
         motor_right.stop()
@@ -435,10 +467,7 @@ def process_frame(image_input, last_res_v):
     return res_v # return speed of the current iteration
     
 
-def rampup():
-    motor_left.run(40)
-    motor_right.run(40)
-    time.sleep(0.1)
+
 
 
 def timeout(signum, frame):
