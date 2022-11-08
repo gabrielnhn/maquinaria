@@ -52,13 +52,13 @@ ip_addr = "0.0.0.0"
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
 # MIN_AREA = 20000
-MIN_AREA = 80
+MIN_AREA = 50
 
 
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
 # MIN_AREA_TRACK = 20000
-MIN_AREA_TRACK = 120
+MIN_AREA_TRACK = 80
 
 # CTR_CENTER_SIZE_FACTOR = 10 
 CTR_CENTER_SIZE_FACTOR = 1 
@@ -73,7 +73,7 @@ LINEAR_SPEED_ON_LOSS = 0.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 40/100
+KP = 25/100
 # KP = 3/100
 
 
@@ -89,12 +89,14 @@ FINALIZATION_PERIOD = 4
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
 
-RESIZE_SIZE = 7
+RESIZE_SIZE = 6
 
 
 # BGR values to filter only the selected color range
 # lower_bgr_values = np.array([185,  190,  191])
-lower_bgr_values = np.array([200,  200,  200])
+lower_bgr_values = np.array([180,  185,  185])
+
+# lower_bgr_values = np.array([192,  193,  193])
 
 upper_bgr_values = np.array([255, 255, 255])
 
@@ -375,8 +377,8 @@ def process_frame(image_input):
         cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
         # center of the image
         cv2.circle(output, (cx, crop_h_start + (height//2)), 1, (75,0,130), 1)
-        cv2.putText(output, now, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (255, 0, 0), 1)
-        cv2.putText(output, debug_str, (0, text_h), cv2.FONT_HERSHEY_PLAIN, 0.5, (255, 0, 0), 1)
+        cv2.putText(output, now, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (50, 255, 255), 1)
+        cv2.putText(output, debug_str, (0, text_h), cv2.FONT_HERSHEY_PLAIN, 0.5, (50, 255, 255), 1)
         # plot the rectangle around contour center
         if x:
             cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
@@ -387,6 +389,7 @@ def process_frame(image_input):
             # Print the image for 5milis, then resume execution
             # cv2.waitKey(5)
             _, imdata = cv2.imencode('.jpg', output)    
+            # _, imdata = cv2.imencode('.jpg', mask)    
             requests.put(f"http://{ip_addr}:5000/upload", data=imdata.tobytes()) # send image to webserver
 
         if should_record:
