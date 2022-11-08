@@ -261,7 +261,7 @@ def get_contour_data(mask, out):
     return (line, mark_side)
 
 
-def process_frame(image_input):
+def process_frame(image_input, last_res_v):
     """
     According to an image 'image_input', determine the speed of the robot
     so it can follow the contour
@@ -274,8 +274,10 @@ def process_frame(image_input):
     global right_mark_count
     global finalization_countdown
 
-    v_left = 0  # left motor resulting speed
-    v_right = 0 # right motor resulting speed
+    res_v = {   
+        "left" : 0, # left motor resulting speed
+        "right" : 0 # right motor resulting speed
+    } 
 
     height, width, _ = image_input.shape
     in_line = False
@@ -357,13 +359,13 @@ def process_frame(image_input):
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
 
-    # result speed
-    v_left = int(linear - angular)
-    v_right = int(linear + angular)
-
     # if image center is inside the contour, angular = 0
     # if in_line:
     #     angular = 0.0
+
+    # resulting speed
+    res_v["left"] = int(linear - angular)
+    res_v["right"] = int(linear + angular)
 
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
@@ -416,18 +418,21 @@ def process_frame(image_input):
             pass
 
     # Publish the message to 'cmd_vel'
-    print(f"{now}\n{debug_str}\nLEFT: { v_left} |  RIGHT: {v_right}\n --- \n")
-
+    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}\n --- \n")
 
     if should_move:
-        if (v_left > MIN_SPEED or v_right > MIN_SPEED):
-            rampup()
 
-        motor_left.run(v_left)
-        motor_right.run(v_right)
+        if (last_res_v["left"] <= MIN_SPEED or last_res_v["right"] <= MIN_SPEED): # if speed of the last iteration is <= than MIN_SPEED
+            if (res_v["left"] > last_res_v["left"] or res_v["right"] > last_res_v["right"]):   # and the current is > last
+                rampup()
+
+        motor_left.run(res_v["left"])
+        motor_right.run(res_v["right"])
     else:
         motor_left.stop()
         motor_right.stop()
+
+    return res_v # return speed of the current iteration
     
 
 def rampup():
@@ -463,15 +468,16 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
-    if should_move:
-        rampup()
-
+    last_res_v = {
+        "left" : 0,
+        "right" : 0
+    }
 
     while retval:
         try:
 
             image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
-            process_frame(image)
+            last_res_v = process_frame(image, last_res_v)
 
             retval, image = video.read()
 
