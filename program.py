@@ -15,6 +15,7 @@ from DC_Motor_pi import DC_Motor
 import requests
 from datetime import datetime
 import argparse
+import time
 
 # init arg parser
 parser = argparse.ArgumentParser()
@@ -68,8 +69,8 @@ MAX_CONTOUR_VERTICES = 45
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 31.0
-LINEAR_SPEED_ON_LOSS = 0.0
+LINEAR_SPEED = 20.0
+LINEAR_SPEED_ON_LOSS = 13.0
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
@@ -78,7 +79,7 @@ KP = 33/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1.6
+LOSS_FACTOR = 2.6
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -454,6 +455,10 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
+    if should_move:
+        motor_left.run(40)
+        motor_right.run(40)
+        time.sleep(0.1)
 
 
     while retval:
