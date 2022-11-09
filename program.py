@@ -64,23 +64,23 @@ MIN_AREA_TRACK = 100
 CTR_CENTER_SIZE_FACTOR = 1 
 
 
-MAX_CONTOUR_VERTICES = 10
+MAX_CONTOUR_VERTICES = 15
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 12.0
+LINEAR_SPEED = 17.0
 LINEAR_SPEED_ON_LOSS = 7.0
 
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
-MIN_SPEED = 20
+MIN_SPEED = 12
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 33/100
-# KP = 3/100
+KP = 35/100
+# KP = 26/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
@@ -201,7 +201,7 @@ def get_contour_data(mask, out):
     while not over:
 
         for contour in contours:
-            contour_vertices = len(cv2.approxPolyDP(contour, 3.0, True))
+            contour_vertices = len(cv2.approxPolyDP(contour, 1.6, True))
             # print("vertices: ", contour_vertices)
 
             if contour_vertices > MAX_CONTOUR_VERTICES:
@@ -388,7 +388,6 @@ def process_frame(image_input, last_res_v):
     res_v["right"] = int(linear + angular)
 
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
-    debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
 
     #Show the output image to the user
 
@@ -397,6 +396,58 @@ def process_frame(image_input, last_res_v):
     global ip_addr
     global record_writer
     
+    # Uncomment to show the binary picture
+    #cv2.imshow("mask", mask)
+
+
+    # Check for final countdown
+    if finalization_countdown != None:
+        if finalization_countdown > 0:
+            finalization_countdown -= 1
+
+        elif finalization_countdown == 0:
+            #should_move = False
+            pass
+
+    
+    left_should_rampup = False
+    right_should_rampup = False
+    
+
+    # if speed of the last iteration is <= than MIN_SPEED
+    # and the current > last
+
+    if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]): 
+        left_should_rampup = True
+
+    if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]): 
+        right_should_rampup = True
+
+    if should_move:
+
+        if left_should_rampup:
+            motor_left.run(37)
+        if right_should_rampup:
+            motor_right.run(37)
+        if left_should_rampup or right_should_rampup:
+            time.sleep(0.05)
+
+        motor_left.run(res_v["left"])
+        motor_right.run(res_v["right"])
+
+
+    
+    else:
+        motor_left.stop()
+        motor_right.stop()
+
+    debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
+    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
+    debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
+    print(debug_str2)
+
+
+
     if should_record or should_show:
         text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
         text_w, text_h = text_size
@@ -406,8 +457,10 @@ def process_frame(image_input, last_res_v):
         cv2.rectangle(output, (crop_w_start, crop_h_start), (crop_w_stop, crop_h_stop), (0,0,255), 2)
         # center of the image
         cv2.circle(output, (cx, crop_h_start + (height//2)), 1, (75,0,130), 1)
-        cv2.putText(output, now, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (50, 255, 255), 1)
-        cv2.putText(output, debug_str, (0, text_h), cv2.FONT_HERSHEY_PLAIN, 0.5, (50, 255, 255), 1)
+        # cv2.putText(output, now, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (50, 255, 255), 1)
+        cv2.putText(output, debug_str, (0, text_h - 10), cv2.FONT_HERSHEY_PLAIN, 0.5, (0, 255, 100), 1)
+        cv2.putText(output, debug_str2, (0, text_h), cv2.FONT_HERSHEY_PLAIN, 0.5, (0, 255, 100), 1)
+
         # plot the rectangle around contour center
         if x:
             cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
@@ -424,53 +477,7 @@ def process_frame(image_input, last_res_v):
         if should_record:
             record_writer.write(output)
     
-    # Uncomment to show the binary picture
-    #cv2.imshow("mask", mask)
-
-
-    # Check for final countdown
-    if finalization_countdown != None:
-        if finalization_countdown > 0:
-            finalization_countdown -= 1
-
-        elif finalization_countdown == 0:
-            #should_move = False
-            pass
-
-    # Publish the message to 'cmd_vel'
-    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
-
-    if should_move:
-        left_should_rampup = False
-        right_should_rampup = False
-        
-
-    # if speed of the last iteration is <= than MIN_SPEED
-    # and the current > last
-
-        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] >= last_res_v["left"]): 
-            left_should_rampup = True
-
-        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] >= last_res_v["right"]): 
-            right_should_rampup = True
-
-
-        if left_should_rampup:
-            motor_left.run(35)
-        if right_should_rampup:
-            motor_right.run(35)
-        if left_should_rampup or right_should_rampup:
-            time.sleep(0.1)
-
-        motor_left.run(res_v["left"])
-        motor_right.run(res_v["right"])
-
-        print(f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n")
-
     
-    else:
-        motor_left.stop()
-        motor_right.stop()
 
     return res_v # return speed of the current iteration
     
@@ -484,7 +491,7 @@ def timeout(signum, frame):
 def main():
     global lost
     global count
-    count = 0
+    count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
     lost = False
 
     signal.signal(signal.SIGALRM, timeout)
