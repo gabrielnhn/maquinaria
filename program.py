@@ -75,7 +75,7 @@ LINEAR_SPEED_ON_LOSS = 7.0
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
-MIN_SPEED = 13
+MIN_SPEED = 11
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
@@ -84,7 +84,7 @@ KP = 30/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1
+LOSS_FACTOR = 1.2
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
