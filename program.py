@@ -68,20 +68,23 @@ MAX_CONTOUR_VERTICES = 10
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 19.0
-LINEAR_SPEED_ON_LOSS = 13.0
+LINEAR_SPEED = 18.0
+LINEAR_SPEED_ON_LOSS = 3.0
+
+
+FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
 MIN_SPEED = 17
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 34/100
+KP = 38/100
 # KP = 3/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1.1
+LOSS_FACTOR = 1.2
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -276,6 +279,7 @@ def process_frame(image_input, last_res_v):
     global right_mark_count
     global finalization_countdown
     global lost
+    global count
 
     res_v = {   
         "left" : 0, # left motor resulting speed
@@ -322,10 +326,17 @@ def process_frame(image_input, last_res_v):
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - cx
-        lost = False
-        # print(f"x: {x}, error {error}")
+        if lost:
+            count = 0
 
-        linear = LINEAR_SPEED
+        lost = False
+
+        if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
+            linear = LINEAR_SPEED
+        else:
+            linear = MIN_SPEED + 1
+            count += 1
+
         just_seen_line = True
 
         # check if image center is inside a square around the line center
@@ -437,10 +448,10 @@ def process_frame(image_input, last_res_v):
     # if speed of the last iteration is <= than MIN_SPEED
     # and the current > last
 
-        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]):
+        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]) and (res_v["left"] >= MIN_SPEED):
             left_should_rampup = True
 
-        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]):
+        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]) and (res_v["right"] >= MIN_SPEED):
             right_should_rampup = True
 
 
@@ -472,6 +483,8 @@ def timeout(signum, frame):
 
 def main():
     global lost
+    global count
+    count = 0
     lost = False
 
     signal.signal(signal.SIGALRM, timeout)
