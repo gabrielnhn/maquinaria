@@ -68,18 +68,18 @@ MAX_CONTOUR_VERTICES = 10
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 18.0
-LINEAR_SPEED_ON_LOSS = 3.0
+LINEAR_SPEED = 12.0
+LINEAR_SPEED_ON_LOSS = 7.0
 
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
-MIN_SPEED = 17
+MIN_SPEED = 20
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 38/100
+KP = 33/100
 # KP = 3/100
 
 
@@ -202,7 +202,7 @@ def get_contour_data(mask, out):
 
         for contour in contours:
             contour_vertices = len(cv2.approxPolyDP(contour, 3.0, True))
-            print("vertices: ", contour_vertices)
+            # print("vertices: ", contour_vertices)
 
             if contour_vertices > MAX_CONTOUR_VERTICES:
                 continue
@@ -334,7 +334,7 @@ def process_frame(image_input, last_res_v):
         if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
             linear = LINEAR_SPEED
         else:
-            linear = MIN_SPEED + 1
+            linear = LINEAR_SPEED_ON_LOSS
             count += 1
 
         just_seen_line = True
@@ -438,7 +438,7 @@ def process_frame(image_input, last_res_v):
             pass
 
     # Publish the message to 'cmd_vel'
-    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}\n --- \n")
+    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
 
     if should_move:
         left_should_rampup = False
@@ -448,10 +448,10 @@ def process_frame(image_input, last_res_v):
     # if speed of the last iteration is <= than MIN_SPEED
     # and the current > last
 
-        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]) and (res_v["left"] >= MIN_SPEED):
+        if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] >= last_res_v["left"]): 
             left_should_rampup = True
 
-        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] > last_res_v["right"]) and (res_v["right"] >= MIN_SPEED):
+        if (last_res_v["right"] <= MIN_SPEED) and (res_v["right"] >= last_res_v["right"]): 
             right_should_rampup = True
 
 
@@ -460,12 +460,12 @@ def process_frame(image_input, last_res_v):
         if right_should_rampup:
             motor_right.run(35)
         if left_should_rampup or right_should_rampup:
-            time.sleep(0.05)
+            time.sleep(0.1)
 
         motor_left.run(res_v["left"])
         motor_right.run(res_v["right"])
 
-
+        print(f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n")
 
     
     else:
