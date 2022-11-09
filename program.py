@@ -52,13 +52,13 @@ ip_addr = "0.0.0.0"
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
 # MIN_AREA = 20000
-MIN_AREA = 50
+MIN_AREA = 400
 
 
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
 # MIN_AREA_TRACK = 20000
-MIN_AREA_TRACK = 100
+MIN_AREA_TRACK = 700
 
 # CTR_CENTER_SIZE_FACTOR = 10 
 CTR_CENTER_SIZE_FACTOR = 1 
@@ -68,23 +68,23 @@ MAX_CONTOUR_VERTICES = 15
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 17.0
+LINEAR_SPEED = 13.0
 LINEAR_SPEED_ON_LOSS = 7.0
 
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
-MIN_SPEED = 12
+MIN_SPEED = 13
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 35/100
+KP = 30/100
 # KP = 26/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 1.2
+LOSS_FACTOR = 1
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -95,7 +95,7 @@ FINALIZATION_PERIOD = 4
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
 
-RESIZE_SIZE = 6
+RESIZE_SIZE = 4
 
 
 # BGR values to filter only the selected color range
@@ -118,8 +118,10 @@ def crop_size(height, width):
     #return (1*height//3, height, width//4, 3*width//4)
     # return (0, height, 0, width)
     # return (2*height//5, height, 0, width)
-    return (0, 2*height//5, 0, width)
     # return (1*height//3, height, 0, width)
+
+    # return (0, 2*height//5, 0, width)
+    return (0, 3*height//5, 0, width)
 
 
 def show_callback():
@@ -426,11 +428,11 @@ def process_frame(image_input, last_res_v):
     if should_move:
 
         if left_should_rampup:
-            motor_left.run(37)
+            motor_left.run(80)
         if right_should_rampup:
-            motor_right.run(37)
+            motor_right.run(80)
         if left_should_rampup or right_should_rampup:
-            time.sleep(0.05)
+            time.sleep(0.01)
 
         motor_left.run(res_v["left"])
         motor_right.run(res_v["right"])
