@@ -58,30 +58,30 @@ MIN_AREA = 50
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
 # MIN_AREA_TRACK = 20000
-MIN_AREA_TRACK = 80
+MIN_AREA_TRACK = 100
 
 # CTR_CENTER_SIZE_FACTOR = 10 
 CTR_CENTER_SIZE_FACTOR = 1 
 
 
-MAX_CONTOUR_VERTICES = 45
+MAX_CONTOUR_VERTICES = 10
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 20.0
+LINEAR_SPEED = 19.0
 LINEAR_SPEED_ON_LOSS = 13.0
 
 # mininum speed to keep the robot
-MIN_SPEED = 15
+MIN_SPEED = 17
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 33/100
+KP = 34/100
 # KP = 3/100
 
 
 # If the line is completely lost, the error value shall be compensated by:
-LOSS_FACTOR = 2.6
+LOSS_FACTOR = 1.1
 
 # Send messages every $TIMER_PERIOD seconds
 TIMER_PERIOD = 0.06
@@ -97,9 +97,9 @@ RESIZE_SIZE = 6
 
 # BGR values to filter only the selected color range
 # lower_bgr_values = np.array([185,  190,  191])
-lower_bgr_values = np.array([180,  185,  185])
+# lower_bgr_values = np.array([180,  185,  185])
 
-# lower_bgr_values = np.array([192,  193,  193])
+lower_bgr_values = np.array([192,  193,  193])
 
 upper_bgr_values = np.array([255, 255, 255])
 
@@ -115,8 +115,8 @@ def crop_size(height, width):
     #return (1*height//3, height, width//4, 3*width//4)
     # return (0, height, 0, width)
     # return (2*height//5, height, 0, width)
-    # return (0, 3*height//5, 0, width)
-    return (1*height//3, height, 0, width)
+    return (0, 2*height//5, 0, width)
+    # return (1*height//3, height, 0, width)
 
 
 def show_callback():
@@ -131,7 +131,7 @@ def record_callback(width, height):
     global should_record
     global record_writer
     should_record = True
-    record_writer = cv2.VideoWriter(f"out-{datetime.now().minute}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 25, (width, height))
+    record_writer = cv2.VideoWriter(f"out-{datetime.now().minute}.mp4", cv2.VideoWriter_fourcc(*"mp4v"), 20, (width, height))
     print("RECORDING")
     print(">>", end="")
 
@@ -150,6 +150,7 @@ def start_follower_callback(request, response):
     global should_move
     global right_mark_count
     global finalization_countdown
+    lost = False
     should_move = True
     right_mark_count = 0
     finalization_countdown = None
@@ -198,6 +199,7 @@ def get_contour_data(mask, out):
 
         for contour in contours:
             contour_vertices = len(cv2.approxPolyDP(contour, 3.0, True))
+            print("vertices: ", contour_vertices)
 
             if contour_vertices > MAX_CONTOUR_VERTICES:
                 continue
@@ -273,6 +275,7 @@ def process_frame(image_input, last_res_v):
     global should_move
     global right_mark_count
     global finalization_countdown
+    global lost
 
     res_v = {   
         "left" : 0, # left motor resulting speed
@@ -308,13 +311,18 @@ def process_frame(image_input, last_res_v):
     x = None
 
     if line:
+        x = line['x']
+
+
+    if (line) and (not lost or ((error < 0) and (x - cx < 0)) or ((error > 0) and (x - cx > 0))):
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
-        x = line['x']
+
 
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - cx
+        lost = False
         # print(f"x: {x}, error {error}")
 
         linear = LINEAR_SPEED
@@ -329,6 +337,7 @@ def process_frame(image_input, last_res_v):
 
     else:
         print("LOST", end=". ")
+        lost = True
         # There is no line in the image.
         # Turn on the spot to find it again.
         if just_seen_line:
@@ -436,12 +445,12 @@ def process_frame(image_input, last_res_v):
 
 
         if left_should_rampup:
-            motor_left.run(40)
+            motor_left.run(35)
         if right_should_rampup:
-            motor_right.run(40)
+            motor_right.run(35)
         if left_should_rampup or right_should_rampup:
-            time.sleep(0.1)
-            
+            time.sleep(0.05)
+
         motor_left.run(res_v["left"])
         motor_right.run(res_v["right"])
 
@@ -462,6 +471,9 @@ def timeout(signum, frame):
     raise TimeoutError
 
 def main():
+    global lost
+    lost = False
+
     signal.signal(signal.SIGALRM, timeout)
     # Use system signals to stop input()
 
