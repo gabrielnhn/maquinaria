@@ -15,6 +15,7 @@ import requests
 from datetime import datetime
 import argparse
 import time
+import threading
 
 # init arg parser
 parser = argparse.ArgumentParser()
@@ -37,6 +38,7 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 
 # Global vars. initial values
+should_stop = False
 image_input = 0
 error = 0
 just_seen_line = False
@@ -92,18 +94,16 @@ TIMER_PERIOD = 0.06
 # When about to end the track, move for ~$FINALIZATION_PERIOD more seconds
 FINALIZATION_PERIOD = 4
 
+# Time the robot takes to finish the track in seconds
+RUNTIME = 80
+
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
 
 RESIZE_SIZE = 4
 
-
 # BGR values to filter only the selected color range
-# lower_bgr_values = np.array([185,  190,  191])
-# lower_bgr_values = np.array([180,  185,  185])
-
 lower_bgr_values = np.array([192,  193,  193])
-
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -274,6 +274,7 @@ def process_frame(image_input, last_res_v):
     so it can follow the contour
     """
 
+
     global error
     global just_seen_line
     global just_seen_right_mark
@@ -377,6 +378,14 @@ def process_frame(image_input, last_res_v):
     else:
         just_seen_right_mark = False
 
+    # # Check for final countdown
+    # if finalization_countdown != None:
+    #     if finalization_countdown > 0:
+    #         finalization_countdown -= 1
+
+    #     elif finalization_countdown == 0:
+    #         #should_move = False
+    #         pass
 
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
@@ -388,37 +397,12 @@ def process_frame(image_input, last_res_v):
     # resulting speed
     res_v["left"] = int(linear - angular)
     res_v["right"] = int(linear + angular)
-
-    now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
-
-    #Show the output image to the user
-
-    global should_record
-    global should_show
-    global ip_addr
-    global record_writer
-    
-    # Uncomment to show the binary picture
-    #cv2.imshow("mask", mask)
-
-
-    # Check for final countdown
-    if finalization_countdown != None:
-        if finalization_countdown > 0:
-            finalization_countdown -= 1
-
-        elif finalization_countdown == 0:
-            #should_move = False
-            pass
-
     
     left_should_rampup = False
     right_should_rampup = False
-    
 
     # if speed of the last iteration is <= than MIN_SPEED
     # and the current > last
-
     if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]): 
         left_should_rampup = True
 
@@ -436,19 +420,23 @@ def process_frame(image_input, last_res_v):
 
         motor_left.run(res_v["left"])
         motor_right.run(res_v["right"])
-
-
     
     else:
         motor_left.stop()
         motor_right.stop()
 
+
+    #Show the output image to the user
+    global should_record
+    global should_show
+    global ip_addr
+    global record_writer
+
+    now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
     print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
     debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
     print(debug_str2)
-
-
 
     if should_record or should_show:
         text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
@@ -479,13 +467,20 @@ def process_frame(image_input, last_res_v):
         if should_record:
             record_writer.write(output)
     
-    
+    # Uncomment to show the binary picture
+    #cv2.imshow("mask", mask)
 
+    
+    
     return res_v # return speed of the current iteration
     
-
-
-
+def stop_timer():
+    global should_stop
+    t = RUNTIME
+    while t:
+        time.sleep(1)
+        t -= 1
+    should_stop = True
 
 def timeout(signum, frame):
     raise TimeoutError
@@ -524,8 +519,13 @@ def main():
         "right" : 0
     }
 
+    stop_t = threading.Thread(target=stop_timer)
+    stop_t.start()
+
     while retval:
         try:
+            if should_stop:
+                pass
 
             image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
             last_res_v = process_frame(image, last_res_v)
