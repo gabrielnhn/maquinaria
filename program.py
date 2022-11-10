@@ -15,7 +15,6 @@ import requests
 from datetime import datetime
 import argparse
 import time
-import threading
 
 # init arg parser
 parser = argparse.ArgumentParser()
@@ -36,16 +35,15 @@ pwm_pin_2 = 18
 motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
-
 # Global vars. initial values
-should_stop = False
+init_time = int(datetime.now().timestamp())
+finalization_countdown = None
 image_input = 0
 error = 0
 just_seen_line = False
 just_seen_right_mark = False
 should_move = False
 right_mark_count = 0
-finalization_countdown = None
 should_record = False
 should_show = False
 record_writer = None
@@ -55,7 +53,6 @@ ip_addr = "0.0.0.0"
 # Minimum size for a contour to be considered anything
 # MIN_AREA = 20000
 MIN_AREA = 400
-
 
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
@@ -83,7 +80,6 @@ MIN_SPEED = 11
 # (Multiplied by the error value)
 KP = 30/100
 # KP = 26/100
-
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -115,12 +111,6 @@ def crop_size(height, width):
     """
     ## Update these values to your liking.
 
-    #return (1*height//3, height, width//4, 3*width//4)
-    # return (0, height, 0, width)
-    # return (2*height//5, height, 0, width)
-    # return (1*height//3, height, 0, width)
-
-    # return (0, 2*height//5, 0, width)
     return (0, 3*height//5, 0, width)
 
 
@@ -280,7 +270,7 @@ def process_frame(image_input, last_res_v):
     global just_seen_right_mark
     global should_move
     global right_mark_count
-    global finalization_countdown
+    global init_time
     global lost
     global count
 
@@ -324,8 +314,6 @@ def process_frame(image_input, last_res_v):
     if (line) and (not lost or ((error < 0) and (x - cx < 0)) or ((error > 0) and (x - cx > 0))):
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
-
-
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - cx
@@ -344,9 +332,6 @@ def process_frame(image_input, last_res_v):
 
         # check if image center is inside a square around the line center
         in_line = ((cx > (x - width//CTR_CENTER_SIZE_FACTOR)) and (cx < (x + width//CTR_CENTER_SIZE_FACTOR)))
-
-        # plot the line centroid on the image
-        # cv2.circle(output, (line['x'], crop_h_start + line['y']), 5, (0,255,0), 7)
         
 
     else:
@@ -372,25 +357,26 @@ def process_frame(image_input, last_res_v):
     #             # Start final countdown to stop the robot
     #             finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
     #             print("\nFinalization Process has begun!\n>>", end="")
-
-
     #         just_seen_right_mark = True
     # else:
     #     just_seen_right_mark = False
 
-    if should_stop:
-        # Start final countdown to stop the robot
-        finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
-        print("\nFinalization Process has begun!\n>>", end="")
+    # if should_stop:
+    #     # Start final countdown to stop the robot
+    #     finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
+    #     print("\nFinalization Process has begun!\n>>", end="")
 
     # Check for final countdown
-    if finalization_countdown != None:
-        if finalization_countdown > 0:
-            finalization_countdown -= 1
+    # if init_time != None:
+    #     if finalization_countdown > 0:
+    #         finalization_countdown -= 1
 
-        elif finalization_countdown == 0:
-            #should_move = False
-            pass
+    #     elif finalization_countdown == 0:
+    #         #should_move = False
+    #         pass
+
+    if (-init_time + int(datetime.now().timestamp())) >= RUNTIME:
+        should_move = False
 
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
@@ -479,14 +465,6 @@ def process_frame(image_input, last_res_v):
     
     return res_v # return speed of the current iteration
     
-def stop_timer():
-    global should_stop
-    t = RUNTIME
-    while t:
-        time.sleep(1)
-        t -= 1
-    should_stop = True
-
 def timeout(signum, frame):
     raise TimeoutError
 
@@ -523,9 +501,6 @@ def main():
         "left" : 0,
         "right" : 0
     }
-
-    stop_t = threading.Thread(target=stop_timer)
-    stop_t.start()
 
     while retval:
         try:
