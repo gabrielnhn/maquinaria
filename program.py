@@ -360,32 +360,37 @@ def process_frame(image_input, last_res_v):
         
         linear = LINEAR_SPEED_ON_LOSS
 
-    if mark_side != None:
-        # print("mark_side: {}".format(mark_side))
+    # if mark_side != None:
+    #     # print("mark_side: {}".format(mark_side))
 
-        if (mark_side == "right") and (finalization_countdown == None) and \
-            (abs(error) <= MAX_ERROR) and (not just_seen_right_mark):
+    #     if (mark_side == "right") and (finalization_countdown == None) and \
+    #         (abs(error) <= MAX_ERROR) and (not just_seen_right_mark):
 
-            right_mark_count += 1
+    #         right_mark_count += 1
 
-            if right_mark_count > 1:
-                # Start final countdown to stop the robot
-                finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
-                print("\nFinalization Process has begun!\n>>", end="")
+    #         if right_mark_count > 1:
+    #             # Start final countdown to stop the robot
+    #             finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
+    #             print("\nFinalization Process has begun!\n>>", end="")
 
 
-            just_seen_right_mark = True
-    else:
-        just_seen_right_mark = False
+    #         just_seen_right_mark = True
+    # else:
+    #     just_seen_right_mark = False
 
-    # # Check for final countdown
-    # if finalization_countdown != None:
-    #     if finalization_countdown > 0:
-    #         finalization_countdown -= 1
+    if should_stop:
+        # Start final countdown to stop the robot
+        finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
+        print("\nFinalization Process has begun!\n>>", end="")
 
-    #     elif finalization_countdown == 0:
-    #         #should_move = False
-    #         pass
+    # Check for final countdown
+    if finalization_countdown != None:
+        if finalization_countdown > 0:
+            finalization_countdown -= 1
+
+        elif finalization_countdown == 0:
+            #should_move = False
+            pass
 
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
@@ -524,8 +529,6 @@ def main():
 
     while retval:
         try:
-            if should_stop:
-                pass
 
             image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
             last_res_v = process_frame(image, last_res_v)
