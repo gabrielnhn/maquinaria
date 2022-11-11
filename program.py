@@ -201,7 +201,7 @@ def get_contour_data(mask, out):
     while not over:
 
         for contour in contours:
-            contour_vertices = len(cv2.approxPolyDP(contour, 1.6, True))
+            contour_vertices = len(cv2.approxPolyDP(contour, 1.0, True))
             # print("vertices: ", contour_vertices)
 
             if contour_vertices > MAX_CONTOUR_VERTICES:
@@ -222,7 +222,10 @@ def get_contour_data(mask, out):
 
                     # plot the area in light blue
                     cv2.drawContours(out, contour, -1, (255,255,0), 1)
-                    cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                    # cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                    #     cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
+
+                    cv2.putText(out, str(contour_vertices), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
                         cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
 
                 else:
