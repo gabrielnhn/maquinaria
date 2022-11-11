@@ -65,23 +65,26 @@ MIN_AREA_TRACK = 700
 CTR_CENTER_SIZE_FACTOR = 1 
 
 
-MAX_CONTOUR_VERTICES = 15
+MAX_CONTOUR_VERTICES = 18
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 13.0
+LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 7.0
+LINEAR_SPEED_ON_CURVE = 10
 
+# error when the curve starts
+CURVE_ERROR_THRH =  21
 
-FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 15
+FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
 MIN_SPEED = 11
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 25/100
-# KP = 26/100
+# KP = 30/100
+KP = 26/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -187,7 +190,7 @@ def get_contour_data(mask, out):
 
     # erode image (filter excessive brightness noise)
     kernel = np.ones((5, 5), np.uint8)
-    mask = cv2.erode(mask, kernel, iterations=1)
+    mask = cv2.erode(mask, kernel, iterations=3)
 
 
     # get a list of contours
@@ -331,16 +334,21 @@ def process_frame(image_input, last_res_v):
 
         lost = False
 
-        if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
-            linear = LINEAR_SPEED
+        # if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
+        #     linear = LINEAR_SPEED
+        # else:
+        #     linear = LINEAR_SPEED_ON_LOSS
+        #     count += 1
+
+        if abs(error) > CURVE_ERROR_THRH:
+            linear = LINEAR_SPEED_ON_CURVE
         else:
-            linear = LINEAR_SPEED_ON_LOSS
-            count += 1
+            linear = LINEAR_SPEED
 
         just_seen_line = True
 
     else:
-        print("LOST", end=". ")
+        # print("LOST", end=". ")
         lost = True
         # There is no line in the image.
         # Turn on the spot to find it again.
@@ -431,9 +439,9 @@ def process_frame(image_input, last_res_v):
 
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
-    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
+    # print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
     debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
-    print(debug_str2)
+    # print(debug_str2)
 
     if should_record or should_show:
         text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
