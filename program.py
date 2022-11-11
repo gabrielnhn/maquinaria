@@ -21,6 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--start", action="store_true", help="Follow line")
 parser.add_argument("-r", "--record", action="store_true", help="Record masked image")
 parser.add_argument("-o", "--output", metavar="address", action="store", help="Show output image to ip address")
+parser.add_argument("-p", "--stop", metavar="store_true", help="Stop the robot in RUNTIME seconds")
 args = parser.parse_args()
 
 # pins setup
@@ -46,6 +47,7 @@ should_move = False
 right_mark_count = 0
 should_record = False
 should_show = False
+should_stop = False
 record_writer = None
 ip_addr = "0.0.0.0"
 
@@ -71,7 +73,7 @@ LINEAR_SPEED = 13.0
 LINEAR_SPEED_ON_LOSS = 7.0
 
 
-FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
+FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 15
 
 # mininum speed to keep the robot
 MIN_SPEED = 11
@@ -135,6 +137,12 @@ def end_record():
     global record_writer
     if should_record:
         record_writer.release()
+
+def stop_callback():
+    global should_stop
+    should_stop = True
+    print("WILL STOP")
+    print(">>", end="")
 
 def start_follower_callback(request, response):
     """
@@ -269,6 +277,7 @@ def process_frame(image_input, last_res_v):
     global just_seen_line
     global just_seen_right_mark
     global should_move
+    global should_stop
     global right_mark_count
     global init_time
     global lost
@@ -280,7 +289,6 @@ def process_frame(image_input, last_res_v):
     } 
 
     height, width, _ = image_input.shape
-    in_line = False
 
     image = image_input
 
@@ -302,8 +310,6 @@ def process_frame(image_input, last_res_v):
     output = image
     line, mark_side = get_contour_data(mask, output[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop])
     # also get the side in which the track mark "is"
-
-    # message = Twist()
 
     x = None
 
@@ -329,10 +335,6 @@ def process_frame(image_input, last_res_v):
             count += 1
 
         just_seen_line = True
-
-        # check if image center is inside a square around the line center
-        in_line = ((cx > (x - width//CTR_CENTER_SIZE_FACTOR)) and (cx < (x + width//CTR_CENTER_SIZE_FACTOR)))
-        
 
     else:
         print("LOST", end=". ")
@@ -367,6 +369,10 @@ def process_frame(image_input, last_res_v):
     #     print("\nFinalization Process has begun!\n>>", end="")
 
     # Check for final countdown
+    if should_stop:
+        if (-init_time + int(datetime.now().timestamp())) >= RUNTIME:
+            should_move = False
+
     # if init_time != None:
     #     if finalization_countdown > 0:
     #         finalization_countdown -= 1
@@ -375,15 +381,9 @@ def process_frame(image_input, last_res_v):
     #         #should_move = False
     #         pass
 
-    if (-init_time + int(datetime.now().timestamp())) >= RUNTIME:
-        should_move = False
 
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
-
-    # if image center is inside the contour, angular = 0
-    # if in_line:
-    #     angular = 0.0
 
     # resulting speed
     res_v["left"] = int(linear - angular)
@@ -392,6 +392,9 @@ def process_frame(image_input, last_res_v):
     left_should_rampup = False
     right_should_rampup = False
 
+    # if image center is inside the contour, angular = 0
+    # if in_line:
+    #     angular = 0.0
     # if speed of the last iteration is <= than MIN_SPEED
     # and the current > last
     if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]): 
@@ -496,6 +499,9 @@ def main():
 
     if args.output != None: # should show image
         show_callback()
+
+    if args.stop != None: # should show image
+        stop_callback()
 
     last_res_v = {
         "left" : 0,
