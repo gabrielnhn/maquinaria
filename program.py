@@ -74,7 +74,7 @@ LINEAR_SPEED_ON_LOSS = 5.0
 LINEAR_SPEED_ON_CURVE = 9.0
 
 # error when the curve starts
-CURVE_ERROR_THRH =  21
+CURVE_ERROR_THRH =  16
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 9
 
@@ -100,6 +100,9 @@ RUNTIME = 80
 
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
+
+# frames without diff in the speed
+NO_MOVEMENT_FRAMES = 5
 
 RESIZE_SIZE = 4
 
@@ -412,7 +415,7 @@ def process_frame(image_input, last_res_v):
     else:
         count = 0
 
-    if count > 10:
+    if count > NO_MOVEMENT_FRAMES:
         left_should_rampup = True
         right_should_rampup = True
         count = 0
