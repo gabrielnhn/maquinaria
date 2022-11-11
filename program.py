@@ -59,29 +59,32 @@ MIN_AREA = 400
 # Minimum size for a contour to be considered part of the track
 # MIN_AREA_TRACK = 40000
 # MIN_AREA_TRACK = 20000
-MIN_AREA_TRACK = 700
+MIN_AREA_TRACK = 900
 
 # CTR_CENTER_SIZE_FACTOR = 10 
 CTR_CENTER_SIZE_FACTOR = 1 
 
 
-MAX_CONTOUR_VERTICES = 15
+MAX_CONTOUR_VERTICES = 30
 
 
 # Robot's speed when following the line
-LINEAR_SPEED = 13.0
+LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 7.0
+LINEAR_SPEED_ON_CURVE = 12.0
 
+# error when the curve starts
+CURVE_ERROR_THRH =  21
 
-FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 15
+FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
 MIN_SPEED = 11
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 25/100
-# KP = 26/100
+# KP = 30/100
+KP = 27/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -326,21 +329,24 @@ def process_frame(image_input, last_res_v):
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - cx
-        if lost:
-            count = 0
 
         lost = False
 
-        if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
-            linear = LINEAR_SPEED
+        # if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
+        #     linear = LINEAR_SPEED
+        # else:
+        #     linear = LINEAR_SPEED_ON_LOSS
+        #     count += 1
+
+        if abs(error) > CURVE_ERROR_THRH:
+            linear = LINEAR_SPEED_ON_CURVE
         else:
-            linear = LINEAR_SPEED_ON_LOSS
-            count += 1
+            linear = LINEAR_SPEED
 
         just_seen_line = True
 
     else:
-        print("LOST", end=". ")
+        # print("LOST", end=". ")
         lost = True
         # There is no line in the image.
         # Turn on the spot to find it again.
@@ -400,6 +406,18 @@ def process_frame(image_input, last_res_v):
     #     angular = 0.0
     # if speed of the last iteration is <= than MIN_SPEED
     # and the current > last
+
+    if (last_res_v["left"] == res_v["left"]) and (last_res_v["right"] == res_v["right"]):
+        count += 1
+    else:
+        count = 0
+
+    if count > 10:
+        left_should_rampup = True
+        right_should_rampup = True
+        count = 0
+
+
     if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]): 
         left_should_rampup = True
 
@@ -431,9 +449,9 @@ def process_frame(image_input, last_res_v):
 
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
-    print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
+    # print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
     debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
-    print(debug_str2)
+    # print(debug_str2)
 
     if should_record or should_show:
         text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
@@ -477,7 +495,6 @@ def timeout(signum, frame):
 def main():
     global lost
     global count
-    count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
     lost = False
 
     signal.signal(signal.SIGALRM, timeout)
