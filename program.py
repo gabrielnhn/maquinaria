@@ -80,7 +80,7 @@ MIN_SPEED = 11
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-KP = 30/100
+KP = 25/100
 # KP = 26/100
 
 # If the line is completely lost, the error value shall be compensated by:
