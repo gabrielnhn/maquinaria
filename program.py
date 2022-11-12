@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--start", action="store_true", help="Follow line")
 parser.add_argument("-r", "--record", action="store_true", help="Record masked image")
 parser.add_argument("-o", "--output", metavar="address", action="store", help="Show output image to ip address")
-parser.add_argument("-p", "--stop", action="store_true", help="Stop the robot in RUNTIME seconds")
+parser.add_argument("-p", "--stop", action="store_true", help="Stop the robot in `RUNTIME` seconds")
 args = parser.parse_args()
 
 # pins setup
@@ -69,6 +69,7 @@ MAX_CONTOUR_VERTICES = 30
 
 
 # Robot's speed when following the line
+# LINEAR_SPEED = 14.0
 LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 5.0
 LINEAR_SPEED_ON_CURVE = 8.0
@@ -79,12 +80,12 @@ CURVE_ERROR_THRH =  18
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 
 # mininum speed to keep the robot
-MIN_SPEED = 9
+MIN_SPEED = 7
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
-# KP = 30/100
-KP = 26/100
+# KP = 26/100
+KP = 27.5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -96,13 +97,13 @@ TIMER_PERIOD = 0.06
 FINALIZATION_PERIOD = 4
 
 # Time the robot takes to finish the track in seconds
-RUNTIME = 140.0
+RUNTIME = 178.0
 
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
 
 # frames without diff in the speed
-NO_MOVEMENT_FRAMES = 5
+NO_MOVEMENT_FRAMES = 3
 
 RESIZE_SIZE = 4
 
@@ -426,7 +427,7 @@ def process_frame(image_input, last_res_v):
         if right_should_rampup:
             motor_right.run(90)
         if left_should_rampup or right_should_rampup:
-            time.sleep(0.005)
+            time.sleep(0.008)
 
         motor_left.run(res_v["left"])
         motor_right.run(res_v["right"])
@@ -546,7 +547,8 @@ try:
 
 except KeyboardInterrupt:
     end_record()
-    print(datetime.now())
+    now = datetime.now()
+    print(now, f"TOTAL TIME {now - init_time}")
     print("\nExiting...")
 
 except Exception as e:
