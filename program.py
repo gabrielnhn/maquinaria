@@ -21,7 +21,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument("-s", "--start", action="store_true", help="Follow line")
 parser.add_argument("-r", "--record", action="store_true", help="Record masked image")
 parser.add_argument("-o", "--output", metavar="address", action="store", help="Show output image to ip address")
-parser.add_argument("-p", "--stop", action="store_true", help="Stop the robot in `RUNTIME` seconds")
+parser.add_argument("-p", "--stop", metavar="store_true", help="Stop the robot in `RUNTIME` seconds")
 args = parser.parse_args()
 
 # pins setup
@@ -37,8 +37,9 @@ motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 # Global vars. initial values
+runtime = 0
 init_time = int(datetime.now().timestamp())
-init_time_iso = int(datetime.now())
+init_time_iso = datetime.now()
 finalization_countdown = None
 image_input = 0
 error = 0
@@ -98,7 +99,7 @@ TIMER_PERIOD = 0.06
 FINALIZATION_PERIOD = 4
 
 # Time the robot takes to finish the track in seconds
-RUNTIME = 127.0
+#RUNTIME = 127.0
 
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
@@ -117,7 +118,7 @@ def crop_size(height, width):
     Get the measures to crop the image
     Output:
     (Height_upper_boundary, Height_lower_boundary,
-     Width_left_boundary, Width_right_boundary)
+    Width_left_boundary, Width_right_boundary)
     """
     ## Update these values to your liking.
 
@@ -148,6 +149,8 @@ def end_record():
 
 def stop_callback():
     global should_stop
+    global runtime
+    runtime = int(args.stop)
     should_stop = True
     print("WILL STOP")
     print(">>", end="")
@@ -382,9 +385,10 @@ def process_frame(image_input, last_res_v):
     #     finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
     #     print("\nFinalization Process has begun!\n>>", end="")
 
+    global runtime
     # Check for final countdown
     if should_stop:
-        if (-init_time + int(datetime.now().timestamp())) >= RUNTIME:
+        if (-init_time + int(datetime.now().timestamp())) >= runtime:
             should_move = False
             print(f"STOPPED AT {datetime.now()}")
 
@@ -518,7 +522,7 @@ def main():
     if args.output != None: # should show image
         show_callback()
 
-    if args.stop: # should show image
+    if args.stop != None: # should show image
         stop_callback()
 
     last_res_v = {
