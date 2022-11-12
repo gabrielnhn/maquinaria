@@ -330,14 +330,15 @@ def process_frame(image_input, last_res_v):
     if line:
         x = line['x']
 
-
-    if (line) and (not lost or ((error < 0) and (x - cx < 0)) or ((error > 0) and (x - cx > 0))):
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
+    # AND didnt lose it to the other side
+
+
+    if (line) and (not lost or (((error < 0) and (x - cx < 0)) or ((error > 0) and (x - cx > 0)) and abs(error) > CURVE_ERROR_THRH)):
         # error:= The difference between the center of the image
         # and the center of the line
         error = x - cx
-
         lost = False
 
         # if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
