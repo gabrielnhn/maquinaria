@@ -3,7 +3,9 @@ import numpy as np
 
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([185,  190,  191])
+# lower_bgr_values = np.array([185,  190,  191])
+lower_bgr_values = np.array([192,  193,  193])
+
 upper_bgr_values = np.array([255, 255, 255])
 
 
@@ -35,7 +37,7 @@ def get_contour_data(mask, out):
 
 
     for contour in contours:
-        contour_vertices = len(cv2.approxPolyDP(contour, 3.0, True))
+        contour_vertices = len(cv2.approxPolyDP(contour, 1.0, True))
 
         M = cv2.moments(contour)
         # Search more about Image Moments on Wikipedia :)
@@ -84,7 +86,7 @@ def get_contour_data(mask, out):
 
 
 
-image_path = "zap3.jpeg"
+image_path = "bosta.png"
 
 image = cv2.imread(image_path)
 
