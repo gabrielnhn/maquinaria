@@ -38,6 +38,7 @@ motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 # Global vars. initial values
 init_time = int(datetime.now().timestamp())
+init_time_iso = int(datetime.now())
 finalization_countdown = None
 image_input = 0
 error = 0
@@ -97,7 +98,7 @@ TIMER_PERIOD = 0.06
 FINALIZATION_PERIOD = 4
 
 # Time the robot takes to finish the track in seconds
-RUNTIME = 178.0
+RUNTIME = 127.0
 
 # The maximum error value for which the robot is still in a straight line
 MAX_ERROR = 30
@@ -548,7 +549,8 @@ try:
 except KeyboardInterrupt:
     end_record()
     now = datetime.now()
-    print(now, f"TOTAL TIME {now - init_time}")
+    print(now)
+    print(f"TOTAL TIME {now - init_time_iso}")
     print("\nExiting...")
 
 except Exception as e:
