@@ -12,7 +12,7 @@ import signal
 import RPi.GPIO as GPIO
 from DC_Motor_pi import DC_Motor
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 import argparse
 import time
 
@@ -72,6 +72,8 @@ LINEAR_SPEED_ON_CURVE = 8.0
 
 # error when the curve starts
 CURVE_ERROR_THRH =  22
+LOSS_THRH =  40
+
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 after_loss_count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
@@ -150,6 +152,8 @@ def stop_callback():
     global should_stop
     global runtime
     runtime = int(args.stop)
+    runtime = timedelta(seconds=runtime)
+
     should_stop = True
     print("WILL STOP")
     print(">>", end="")
@@ -218,7 +222,7 @@ def get_contour_data(mask, out):
             if (M['m00'] < MIN_AREA):
                 continue
 
-            if (contour_vertices > MAX_CONTOUR_VERTICES) and (M['m00'] > MIN_AREA_TRACK):
+            if (contour_vertices < MAX_CONTOUR_VERTICES) and (M['m00'] > MIN_AREA_TRACK):
                 # Contour is part of the track
                 line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                 line['y'] = int(M["m01"]/M["m00"])
@@ -234,7 +238,7 @@ def get_contour_data(mask, out):
             else:
                 # plot the area in pink
                 cv2.drawContours(out, contour, -1, (255,0,255), 1)
-                cv2.putText(out, str(contour_vertices), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                cv2.putText(out, f"{contour_vertices}-{M['m00']}", (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
                     cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,0,255), 2)
 
         if line:
@@ -242,7 +246,7 @@ def get_contour_data(mask, out):
 
         # Did not find the line. Try eroding more?
         elif not tried_once:
-            mask = cv2.erode(mask, kernel, iterations=2)
+            mask = cv2.erode(mask, kernel, iterations=1)
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
             tried_once = True
 
@@ -250,7 +254,7 @@ def get_contour_data(mask, out):
         else:
             over = True
 
-    return (line, mark_side)
+    return line
 
 
 def process_frame(image_input, last_res_v):
@@ -259,6 +263,7 @@ def process_frame(image_input, last_res_v):
     so it can follow the contour
     """
 
+    debug_str2 = ""
     global error
     global just_seen_line
     global just_seen_right_mark
@@ -294,7 +299,7 @@ def process_frame(image_input, last_res_v):
     # get the centroid of the biggest contour in the picture,
     # and plot its detail on the cropped part of the output image
     output = image
-    line, mark_side = get_contour_data(mask, output[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop])
+    line = get_contour_data(mask, output[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop])
     # also get the side in which the track mark "is"
 
     x = None
@@ -302,11 +307,13 @@ def process_frame(image_input, last_res_v):
     if line:
         x = line['x']
         new_error = x - cx
+    else:
+        new_error = None
 
     # (((error < 0) and (new_error < 0)) or ((error > 0) and (new_error > 0)))):
 
     if (line) and ((not lost) or (
-        abs(new_error - error) < CURVE_ERROR_THRH)):
+        abs(new_error - error) < LOSS_THRH)):
 
         # error:= The difference between the center of the image and the center of the line
         error = new_error
@@ -328,6 +335,8 @@ def process_frame(image_input, last_res_v):
         just_seen_line = True
 
     else:
+        if new_error:
+            debug_str2 = f"last={error}| new={new_error}"
         # print("LOST", end=". ")
         lost = True
         # There is no line in the image.
@@ -400,7 +409,7 @@ def process_frame(image_input, last_res_v):
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
     # print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
-    debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
+    # debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
     # print(debug_str2)
 
     if should_record or should_show:
@@ -419,7 +428,7 @@ def process_frame(image_input, last_res_v):
         # plot the rectangle around contour center
         if x:
             cv2.circle(output, (line['x'], crop_h_start + line['y']), 1, (0,255,0), 1)
-            cv2.rectangle(output, (x - width//CTR_CENTER_SIZE_FACTOR, crop_h_start), (x + width//CTR_CENTER_SIZE_FACTOR, crop_h_stop), (0,0,255), 2)
+            cv2.rectangle(output, (x - width, crop_h_start), (x + width, crop_h_stop), (0,0,255), 2)
 
         if should_show:
             # cv2.imshow("output", output)
