@@ -189,7 +189,7 @@ def stop_follower_callback(request, response):
     return response
 
 
-def get_contour_data(mask, out):
+def get_contour_data(mask, out, previous_pos):
     """
     Return the centroid of the largest contour in
     the binary image 'mask' (the line)
@@ -210,6 +210,8 @@ def get_contour_data(mask, out):
     over = False
     tried_once = False
 
+    possible_tracks = []
+
     while not over:
 
         for contour in contours:
@@ -226,6 +228,8 @@ def get_contour_data(mask, out):
                 # Contour is part of the track
                 line['x'] = crop_w_start + int(M["m10"]/M["m00"])
                 line['y'] = int(M["m01"]/M["m00"])
+
+                possible_tracks.append(line)
 
                 # plot the amount of vertices in light blue
                 cv2.drawContours(out, contour, -1, (255,255,0), 1)
@@ -254,7 +258,9 @@ def get_contour_data(mask, out):
         else:
             over = True
 
-    return line
+    chosen_line = min(possible_tracks, lambda line: abs(line["x"] - previous_pos))
+
+    return chosen_line
 
 
 def process_frame(image_input, last_res_v):
@@ -299,7 +305,7 @@ def process_frame(image_input, last_res_v):
     # get the centroid of the biggest contour in the picture,
     # and plot its detail on the cropped part of the output image
     output = image
-    line = get_contour_data(mask, output[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop])
+    line = get_contour_data(mask, output[crop_h_start:crop_h_stop, crop_w_start:crop_w_stop], error + cx)
     # also get the side in which the track mark "is"
 
     x = None
@@ -452,8 +458,10 @@ def timeout(signum, frame):
 def main():
     print(datetime.now())
     global lost
+    global error
     global no_movement_count
     lost = False
+
 
     signal.signal(signal.SIGALRM, timeout)
     # Use system signals to stop input()
@@ -466,8 +474,8 @@ def main():
     retval, image = video.read()
     print(image.shape)
     height, width, _ = image.shape
-
     print(">>", end="")
+    error = width//(RESIZE_SIZE*2)
 
     if args.start:  # should start following line
         start_follower_callback(None, None)
