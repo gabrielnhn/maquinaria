@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """
-A ROS2 node used to control a differential drive robot with a camera,
+A program used to control a differential drive robot with a camera,
 so it follows the line in a Robotrace style track.
-You may change the parameters to your liking.
+You may change the parameters BECAUSE IT IS NECESSARY.
 """
 __author__ = "Gabriel Hishida, Gabriel Pontarolo, Tiago Serique and Isadora Botassari"
 
@@ -37,16 +37,13 @@ motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 # Global vars. initial values
-runtime = 0
+runtime = 0 # time until it should stop
 init_time = int(datetime.now().timestamp())
 init_time_iso = datetime.now()
-finalization_countdown = None
-image_input = 0
+image_input = None
 error = 0
 just_seen_line = False
-just_seen_right_mark = False
 should_move = False
-right_mark_count = 0
 should_record = False
 should_show = False
 should_stop = False
@@ -54,22 +51,18 @@ record_writer = None
 ip_addr = "0.0.0.0"
 no_movement_count = 0
 
-## User-defined parameters: (Update these values to your liking)
+# finalization_countdown = None
+# right_mark_count = 0
+# just_seen_right_mark = False
+
+## User-defined parameters: (Update these values as necessary)
 # Minimum size for a contour to be considered anything
-# MIN_AREA = 20000
 MIN_AREA = 400
 
 # Minimum size for a contour to be considered part of the track
-# MIN_AREA_TRACK = 40000
-# MIN_AREA_TRACK = 20000
 MIN_AREA_TRACK = 900
 
-# CTR_CENTER_SIZE_FACTOR = 10 
-CTR_CENTER_SIZE_FACTOR = 1 
-
-
 MAX_CONTOUR_VERTICES = 30
-
 
 # Robot's speed when following the line
 # LINEAR_SPEED = 14.0
@@ -83,7 +76,7 @@ CURVE_ERROR_THRH =  22
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
 after_loss_count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
 
-# mininum speed to keep the robot
+# mininum speed to keep the robot running without rampup
 MIN_SPEED = 7
 
 # Proportional constant to be applied on speed when turning
@@ -94,22 +87,26 @@ KP = 28.5/100
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
 
+# frames without diff in the speed
+NO_MOVEMENT_FRAMES = 3
+
+RESIZE_SIZE = 4
+
+
+# CTR_CENTER_SIZE_FACTOR = 10 
+# CTR_CENTER_SIZE_FACTOR = 1 
 # Send messages every $TIMER_PERIOD seconds
-TIMER_PERIOD = 0.06
+# TIMER_PERIOD = 0.06
 
 # When about to end the track, move for ~$FINALIZATION_PERIOD more seconds
-FINALIZATION_PERIOD = 4
+# FINALIZATION_PERIOD = 4
 
 # Time the robot takes to finish the track in seconds
 #RUNTIME = 127.0
 
 # The maximum error value for which the robot is still in a straight line
-MAX_ERROR = 30
+# MAX_ERROR = 30
 
-# frames without diff in the speed
-NO_MOVEMENT_FRAMES = 3
-
-RESIZE_SIZE = 4
 
 # BGR values to filter only the selected color range
 lower_bgr_values = np.array([170,  170,  170])
@@ -122,7 +119,7 @@ def crop_size(height, width):
     (Height_upper_boundary, Height_lower_boundary,
     Width_left_boundary, Width_right_boundary)
     """
-    ## Update these values to your liking.
+    ## Update these parameters as well.
 
     return (0, 3*height//5, 0, width)
 
@@ -168,9 +165,8 @@ def start_follower_callback(request, response):
     global finalization_countdown
     lost = False
     should_move = True
-    right_mark_count = 0
-    finalization_countdown = None
-
+    # right_mark_count = 0
+    # finalization_countdown = None
 
     print(">>", end="")
     return response
@@ -181,9 +177,9 @@ def stop_follower_callback(request, response):
     """
     print("STOPPED!")
     global should_move
-    global finalization_countdown
+    # global finalization_countdown
     should_move = False
-    finalization_countdown = None
+    # finalization_countdown = None
 
     print(">>", end="")
     return response
@@ -202,7 +198,6 @@ def get_contour_data(mask, out):
     kernel = np.ones((5, 5), np.uint8)
     mask = cv2.erode(mask, kernel, iterations=1)
 
-
     # get a list of contours
     contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_NONE)
 
@@ -214,55 +209,33 @@ def get_contour_data(mask, out):
     while not over:
 
         for contour in contours:
-            contour_vertices = len(cv2.approxPolyDP(contour, 1.0, True))
-            # print("vertices: ", contour_vertices)
-
-            if contour_vertices > MAX_CONTOUR_VERTICES:
-                continue
-
-
             M = cv2.moments(contour)
             # Search more about Image Moments on Wikipedia :)
 
+            contour_vertices = len(cv2.approxPolyDP(contour, 1.0, True))
+            # print("vertices: ", contour_vertices)
 
-            if M['m00'] > MIN_AREA:
-            # if countor.area > MIN_AREA:
+            if (M['m00'] < MIN_AREA):
+                continue
 
-                if (M['m00'] > MIN_AREA_TRACK):
-                    # Contour is part of the track
-                    line['x'] = crop_w_start + int(M["m10"]/M["m00"])
-                    line['y'] = int(M["m01"]/M["m00"])
+            if (contour_vertices > MAX_CONTOUR_VERTICES) and (M['m00'] > MIN_AREA_TRACK):
+                # Contour is part of the track
+                line['x'] = crop_w_start + int(M["m10"]/M["m00"])
+                line['y'] = int(M["m01"]/M["m00"])
 
-                    # plot the area in light blue
-                    cv2.drawContours(out, contour, -1, (255,255,0), 1)
-                    # cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                    #     cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
+                # plot the amount of vertices in light blue
+                cv2.drawContours(out, contour, -1, (255,255,0), 1)
+                # cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                #     cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
 
-                    cv2.putText(out, str(contour_vertices), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                        cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
+                cv2.putText(out, str(contour_vertices), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                    cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (100,200,150), 1)
 
-                else:
-                    # Contour is a track mark
-                    if (not mark) or (mark['y'] > int(M["m01"]/M["m00"])):
-                        # if there are more than one mark, consider only
-                        # the one closest to the robot
-                        mark['y'] = int(M["m01"]/M["m00"])
-                        mark['x'] = crop_w_start + int(M["m10"]/M["m00"])
-
-                        # plot the area in pink
-                        cv2.drawContours(out, contour, -1, (255,0,255), 1)
-                        cv2.putText(out, str(M['m00']), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
-                            cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,0,255), 2)
-
-
-        if mark and line:
-        # if both contours exist
-            if mark['x'] > line['x']:
-                mark_side = "right"
             else:
-                mark_side = "left"
-        else:
-            mark_side = None
+                # plot the area in pink
+                cv2.drawContours(out, contour, -1, (255,0,255), 1)
+                cv2.putText(out, str(contour_vertices), (int(M["m10"]/M["m00"]), int(M["m01"]/M["m00"])),
+                    cv2.FONT_HERSHEY_PLAIN, 2/(RESIZE_SIZE/3), (255,0,255), 2)
 
         if line:
             over = True
@@ -275,9 +248,7 @@ def get_contour_data(mask, out):
 
         # Did not find anything
         else:
-        
             over = True
-
 
     return (line, mark_side)
 
@@ -299,14 +270,12 @@ def process_frame(image_input, last_res_v):
     global no_movement_count
     global after_loss_count
 
-
     res_v = {   
         "left" : 0, # left motor resulting speed
         "right" : 0 # right motor resulting speed
     } 
 
     height, width, _ = image_input.shape
-
     image = image_input
 
     global crop_w_start
@@ -334,25 +303,18 @@ def process_frame(image_input, last_res_v):
         x = line['x']
         new_error = x - cx
 
-    # if there even is a line in the image:
-    # (as the camera could not be reading any lines)
-    # AND didnt lose it to the other side
-
+    # (((error < 0) and (new_error < 0)) or ((error > 0) and (new_error > 0)))):
 
     if (line) and ((not lost) or (
-        # (((error < 0) and (new_error < 0)) or ((error > 0) and (new_error > 0)))):
         abs(new_error - error) < CURVE_ERROR_THRH)):
 
-        # error:= The difference between the center of the image
-        # and the center of the line
+        # error:= The difference between the center of the image and the center of the line
         error = new_error
 
         if lost:
             after_loss_count = 0
 
-
         lost = False
-
 
         if abs(error) > CURVE_ERROR_THRH:
             linear = LINEAR_SPEED_ON_CURVE
@@ -376,33 +338,14 @@ def process_frame(image_input, last_res_v):
         
         linear = LINEAR_SPEED_ON_LOSS
 
-    # if mark_side != None:
-    #     # print("mark_side: {}".format(mark_side))
-
-    #     if (mark_side == "right") and (finalization_countdown == None) and \
-    #         (abs(error) <= MAX_ERROR) and (not just_seen_right_mark):
-
-    #         right_mark_count += 1
-
-    #         if right_mark_count > 1:
-    #             # Start final countdown to stop the robot
-    #             finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
-    #             print("\nFinalization Process has begun!\n>>", end="")
-    #         just_seen_right_mark = True
-    # else:
-    #     just_seen_right_mark = False
-
-    # if should_stop:
-    #     # Start final countdown to stop the robot
-    #     finalization_countdown = int(FINALIZATION_PERIOD / TIMER_PERIOD) + 1
-    #     print("\nFinalization Process has begun!\n>>", end="")
 
     global runtime
     # Check for final countdown
     if should_stop:
-        if (-init_time + int(datetime.now().timestamp())) >= runtime:
+        if (datetime.now() - init_time_iso) >= runtime:
             should_move = False
             print(f"STOPPED AT {datetime.now()}")
+
 
     # Determine the speed to turn and get the line in the center of the camera.
     angular = float(error) * -KP
@@ -413,12 +356,6 @@ def process_frame(image_input, last_res_v):
     
     left_should_rampup = False
     right_should_rampup = False
-
-    # if image center is inside the contour, angular = 0
-    # if in_line:
-    #     angular = 0.0
-    # if speed of the last iteration is <= than MIN_SPEED
-    # and the current > last
 
     if (last_res_v["left"] == res_v["left"]) and (last_res_v["right"] == res_v["right"]):
         no_movement_count += 1
@@ -497,8 +434,6 @@ def process_frame(image_input, last_res_v):
     
     # Uncomment to show the binary picture
     #cv2.imshow("mask", mask)
-
-    
     
     return res_v # return speed of the current iteration
     
