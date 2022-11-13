@@ -52,6 +52,7 @@ should_show = False
 should_stop = False
 record_writer = None
 ip_addr = "0.0.0.0"
+no_movement_count = 0
 
 ## User-defined parameters: (Update these values to your liking)
 # Minimum size for a contour to be considered anything
@@ -77,9 +78,10 @@ LINEAR_SPEED_ON_LOSS = 5.0
 LINEAR_SPEED_ON_CURVE = 8.0
 
 # error when the curve starts
-CURVE_ERROR_THRH =  18
+CURVE_ERROR_THRH =  22
 
 FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
+after_loss_count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
 
 # mininum speed to keep the robot
 MIN_SPEED = 7
@@ -87,7 +89,7 @@ MIN_SPEED = 7
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 # KP = 26/100
-KP = 27.5/100
+KP = 28.5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -110,7 +112,7 @@ NO_MOVEMENT_FRAMES = 3
 RESIZE_SIZE = 4
 
 # BGR values to filter only the selected color range
-lower_bgr_values = np.array([192,  193,  193])
+lower_bgr_values = np.array([170,  170,  170])
 upper_bgr_values = np.array([255, 255, 255])
 
 def crop_size(height, width):
@@ -286,7 +288,6 @@ def process_frame(image_input, last_res_v):
     so it can follow the contour
     """
 
-
     global error
     global just_seen_line
     global just_seen_right_mark
@@ -295,7 +296,9 @@ def process_frame(image_input, last_res_v):
     global right_mark_count
     global init_time
     global lost
-    global count
+    global no_movement_count
+    global after_loss_count
+
 
     res_v = {   
         "left" : 0, # left motor resulting speed
@@ -329,29 +332,37 @@ def process_frame(image_input, last_res_v):
 
     if line:
         x = line['x']
+        new_error = x - cx
 
     # if there even is a line in the image:
     # (as the camera could not be reading any lines)
     # AND didnt lose it to the other side
 
 
-    if (line) and (not lost or (((error < 0) and (x - cx < 0)) or ((error > 0) and (x - cx > 0)) and abs(error) > CURVE_ERROR_THRH)):
+    if (line) and ((not lost) or (
+        # (((error < 0) and (new_error < 0)) or ((error > 0) and (new_error > 0)))):
+        abs(new_error - error) < CURVE_ERROR_THRH)):
+
         # error:= The difference between the center of the image
         # and the center of the line
-        error = x - cx
+        error = new_error
+
+        if lost:
+            after_loss_count = 0
+
+
         lost = False
 
-        # if count > FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
-        #     linear = LINEAR_SPEED
-        # else:
-        #     linear = LINEAR_SPEED_ON_LOSS
-        #     count += 1
 
         if abs(error) > CURVE_ERROR_THRH:
             linear = LINEAR_SPEED_ON_CURVE
         else:
             linear = LINEAR_SPEED
 
+        if after_loss_count < FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS:
+            linear = LINEAR_SPEED_ON_LOSS
+            after_loss_count += 1
+        
         just_seen_line = True
 
     else:
@@ -410,14 +421,14 @@ def process_frame(image_input, last_res_v):
     # and the current > last
 
     if (last_res_v["left"] == res_v["left"]) and (last_res_v["right"] == res_v["right"]):
-        count += 1
+        no_movement_count += 1
     else:
-        count = 0
+        no_movement_count = 0
 
-    if count > NO_MOVEMENT_FRAMES:
+    if no_movement_count > NO_MOVEMENT_FRAMES:
         left_should_rampup = True
         right_should_rampup = True
-        count = 0
+        no_movement_count = 0
 
 
     if (last_res_v["left"] <= MIN_SPEED) and (res_v["left"] > last_res_v["left"]): 
@@ -497,7 +508,7 @@ def timeout(signum, frame):
 def main():
     print(datetime.now())
     global lost
-    global count
+    global no_movement_count
     lost = False
 
     signal.signal(signal.SIGALRM, timeout)
