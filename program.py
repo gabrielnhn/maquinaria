@@ -75,7 +75,7 @@ CURVE_ERROR_THRH =  22
 LOSS_THRH =  40
 
 
-FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 6
+FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 10
 after_loss_count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
 
 # mininum speed to keep the robot running without rampup
@@ -360,7 +360,7 @@ def process_frame(image_input, last_res_v):
 
     global runtime
     # Check for final countdown
-    if should_stop:
+    if should_move and should_stop:
         if (datetime.now() - init_time_iso) >= runtime:
             should_move = False
             print(f"STOPPED AT {datetime.now()}")
