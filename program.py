@@ -68,7 +68,7 @@ MAX_CONTOUR_VERTICES = 30
 # LINEAR_SPEED = 14.0
 LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 5.0
-LINEAR_SPEED_ON_CURVE = 8.0
+LINEAR_SPEED_ON_CURVE = 7.5
 
 # error when the curve starts
 CURVE_ERROR_THRH =  22
@@ -84,7 +84,7 @@ MIN_SPEED = 7
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 # KP = 26/100
-KP = 28.5/100
+KP = 27.5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
