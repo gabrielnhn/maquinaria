@@ -258,7 +258,10 @@ def get_contour_data(mask, out, previous_pos):
         else:
             over = True
 
-    chosen_line = min(possible_tracks, lambda line: abs(line["x"] - previous_pos))
+    if not possible_tracks:
+        chosen_line = None
+    else:
+        chosen_line = min(possible_tracks, key=lambda line: abs(line["x"] - previous_pos))
 
     return chosen_line
 
