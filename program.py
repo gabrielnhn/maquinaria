@@ -68,10 +68,10 @@ MAX_CONTOUR_VERTICES = 30
 # LINEAR_SPEED = 14.0
 LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 5.0
-LINEAR_SPEED_ON_CURVE = 7.5
+LINEAR_SPEED_ON_CURVE = 9.0
 
 # error when the curve starts
-CURVE_ERROR_THRH =  22
+CURVE_ERROR_THRH =  19
 LOSS_THRH =  40
 
 
@@ -84,7 +84,7 @@ MIN_SPEED = 7
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 # KP = 26/100
-KP = 27.5/100
+KP = 26/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -417,9 +417,12 @@ def process_frame(image_input, last_res_v):
 
     now = f"{datetime.now().strftime('%M:%S.%f')[:-4]}"
     debug_str = f"A: {int(angular)}|L: {linear}|E: {error}"
-    # print(f"{now}\n{debug_str}\nLEFT: {res_v['left']} |  RIGHT: {res_v['right']}")
-    # debug_str2 = f"LEFT: {left_should_rampup} |  RIGHT: {right_should_rampup}\n -- \n"
-    # print(debug_str2)
+    debug_str += f"lft{res_v['left']}"
+    if left_should_rampup:
+        debug_str += "(rmp)"
+    debug_str += f"rgt{res_v['right']}"
+    if right_should_rampup:
+        debug_str += "(rmp)"
 
     if should_record or should_show:
         text_size, _ = cv2.getTextSize(debug_str, cv2.FONT_HERSHEY_PLAIN, 2, 2)
