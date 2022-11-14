@@ -68,10 +68,10 @@ MAX_CONTOUR_VERTICES = 30
 # LINEAR_SPEED = 14.0
 LINEAR_SPEED = 15.0
 LINEAR_SPEED_ON_LOSS = 5.0
-LINEAR_SPEED_ON_CURVE = 9.0
+LINEAR_SPEED_ON_CURVE = 7.5
 
 # error when the curve starts
-CURVE_ERROR_THRH =  19
+CURVE_ERROR_THRH =  22
 LOSS_THRH =  40
 
 
@@ -84,7 +84,7 @@ MIN_SPEED = 7
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
 # KP = 26/100
-KP = 26/100
+KP = 27.5/100
 
 # If the line is completely lost, the error value shall be compensated by:
 LOSS_FACTOR = 1.2
@@ -113,6 +113,7 @@ RESIZE_SIZE = 4
 # BGR values to filter only the selected color range
 lower_bgr_values = np.array([170,  170,  170])
 upper_bgr_values = np.array([255, 255, 255])
+
 
 def crop_size(height, width):
     """
