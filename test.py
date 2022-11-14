@@ -17,8 +17,8 @@ motor_1 = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_2 = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
 
 try:
-    motor_1.forward(40)
-    motor_2.forward(40)
+    motor_1.forward(80)
+    motor_2.forward(80)
     time.sleep(0.1)
 
     while True:

@@ -66,9 +66,9 @@ MAX_CONTOUR_VERTICES = 30
 
 # Robot's speed when following the line
 # LINEAR_SPEED = 14.0
-LINEAR_SPEED = 14.0
-LINEAR_SPEED_ON_LOSS = 2.0
-LINEAR_SPEED_ON_CURVE = 5.5
+LINEAR_SPEED = 15.0
+LINEAR_SPEED_ON_LOSS = 5.0
+LINEAR_SPEED_ON_CURVE = 7.5
 
 # error when the curve starts
 CURVE_ERROR_THRH =  22
@@ -79,7 +79,7 @@ FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS = 10
 after_loss_count = FRAMES_TO_USE_LINEAR_SPEED_ON_LOSS + 1
 
 # mininum speed to keep the robot running without rampup
-MIN_SPEED = 6
+MIN_SPEED = 7
 
 # Proportional constant to be applied on speed when turning
 # (Multiplied by the error value)
