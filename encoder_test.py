@@ -27,7 +27,7 @@ counter = 0
 current_dir = 0
 knob_counter = 0
 
-last_ts = datetime.timestamp(datetime.now())
+last_ts = datetime.now().second
 
 i = 0   # motor speed
 while i <= 100:
@@ -54,7 +54,7 @@ while i <= 100:
     print(f"Direção: {dir_name}, Contador: {knob_counter}, Rotações {rotations}")
 
     # increment motor speed each second
-    curr_ts = datetime.timestamp(datetime.now())
+    curr_ts = datetime.now().second
     if (curr_ts - last_ts) > 1.0:
         i += 1
         last_ts = curr_ts
