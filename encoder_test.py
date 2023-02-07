@@ -8,7 +8,8 @@ from DC_Motor_pi import DC_Motor
 CLOCKWISE = 1
 COUNTERCLOCKWISE = -1
 
-KNOB_NUMBER = 460
+LINE_NUMBER = 46
+RPM = 1300
 
 # motor pins setup
 clockwise_pin = 16
@@ -24,9 +25,9 @@ GPIO.setup(encoder_b, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 
 # init state variables
 last_a_state = GPIO.input(encoder_a)
-counter = 0
 current_dir = 0
-knob_counter = 0
+pulse_counter = 0
+total_pulse_counter = 0
 
 last_ts = datetime.timestamp(datetime.now())
 start_ts = last_ts
@@ -37,35 +38,35 @@ while i < 100:
         motor.forward(10)
     else:
         motor.backwards(10)
-    #motor.forward(100)
 
     current_a_state = GPIO.input(encoder_a)
     b_state = GPIO.input(encoder_b)
 
     # check if encoder detected a turn
-    if current_a_state != last_a_state and current_a_state == 1:
-        knob_counter += 1
+    if current_a_state and not last_a_state:
+        total_pulse_counter += 1
 
         # check direction
-        if b_state != current_a_state:
-            current_dir = COUNTERCLOCKWISE
+        if b_state:
+            current_dir = "anti-horário"
+            pulse_counter += 1
         else:
-            current_dir = CLOCKWISE
+            current_dir = "horário"
+            pulse_counter -= 1
 
     last_a_state = current_a_state
 
-    curr_ts = datetime.timestamp(datetime.now())
+    # some rotory encoder calculations
+    calc_line_num = total_pulse_counter // LINE_NUMBER
+    frquency = RPM * LINE_NUMBER/60
+    calc_rpm = frquency * 60 // LINE_NUMBER
 
-    # output string
-    dir_name = "horário" if current_dir == CLOCKWISE else "anti-horário"
-    rotations = knob_counter // KNOB_NUMBER
-    rpm = (knob_counter * 60) // 130
-    print(
-        f"Tempo: {i}, RPM: {rpm}, Direção: {current_dir}, Contador: {knob_counter}, Rotações {rotations}"
-    )
+    rotations = total_pulse_counter // LINE_NUMBER
+
+    print(f"Tempo: {i}, RPM: {calc_rpm}, Direção: {current_dir}, Pulsos totais: {total_pulse_counter}, Rotações {rotations}, Pulsos: {pulse_counter}")
 
     # increment motor speed each second
-    # print(last_ts, curr_ts)
+    curr_ts = datetime.timestamp(datetime.now())
     if (curr_ts - last_ts) > 1.0:
         i += 1
         last_ts = curr_ts
