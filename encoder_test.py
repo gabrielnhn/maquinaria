@@ -3,10 +3,8 @@ import time
 from datetime import datetime
 from DC_Motor_pi import DC_Motor
 
-# hardware pwm: 12, 32, 33, 35
 
-CLOCKWISE = 1
-COUNTERCLOCKWISE = -1
+# hardware pwm: 12, 32, 33, 35
 
 LINE_NUMBER = 7
 RPM = 800
@@ -29,15 +27,15 @@ current_dir = 0
 pulse_counter = 0
 total_pulse_counter = 0
 
-last_ts = datetime.timestamp(datetime.now())
+last_ts = time.time()
 start_ts = last_ts
 
 direc = 0
-i = 10  # motor speed
-period_down = False
-period_start = False
 period = 1
-can_print = False
+pstart = 0
+wave_state = 0
+
+i = 10  # motor speed
 while i < 100:
     if (i // 10 % 2) == 0:
         direc = 1
@@ -49,24 +47,15 @@ while i < 100:
     current_a_state = GPIO.input(encoder_a)
 
 
-    if (
-        not period_down
-        and not period_start
-        and current_a_state == 1
-        and last_a_state == 0
-    ):
-        period_start = True
-        period = time.time_ns() / 1_000_000
+    if wave_state == 0:
+        if current_a_state == 1 and last_a_state == 0:
+            period = (time.time_ns() / 1000) - pstart
+            pstart = time.time_ns() / 1000
+            wave_state = 1
 
-    if not period_down and period_start and current_a_state == 0 and last_a_state == 1:
-        period_down = True
-
-    if period_down and current_a_state == 1 and last_a_state == 0:
-        period = (time.time_ns() / 1_000_000) - period
-        period_down = False
-        period_start = False
-        can_print = True
-
+    elif wave_state == 1:
+        if current_a_state == 0 and last_a_state == 1:
+            wave_state = 0
 
     # check if encoder detected a turn
     if current_a_state != last_a_state and current_a_state == 1:
@@ -83,7 +72,7 @@ while i < 100:
 
     last_a_state = current_a_state
 
-    curr_ts = datetime.timestamp(datetime.now())
+    curr_ts = time.time()
     # some rotory encoder calculations
     frequency = total_pulse_counter / (curr_ts - start_ts)
     # calc_line_num = frequency * 60 // RPM
@@ -91,9 +80,8 @@ while i < 100:
 
     rotations = total_pulse_counter // LINE_NUMBER
 
-    if can_print:
-        can_print = False
-        print(f"Speed: {i}, RPM: {calc_rpm}, Periodo: {period}, Frequencia: {1/period}, Dir: {direc}, M_Direc: {current_dir}")
+
+    print(f"Speed: {i}, RPM: {calc_rpm}, Periodo: {period}, Frequencia: {1/period}, Dir: {direc}, M_Direc: {current_dir}")
 
     # increment motor speed each second
     if (curr_ts - last_ts) > 1.0:
