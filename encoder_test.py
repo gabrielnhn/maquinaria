@@ -1,5 +1,5 @@
 import RPi.GPIO as GPIO
-from time import sleep
+import time
 from datetime import datetime
 from DC_Motor_pi import DC_Motor
 
@@ -8,8 +8,8 @@ from DC_Motor_pi import DC_Motor
 CLOCKWISE = 1
 COUNTERCLOCKWISE = -1
 
-LINE_NUMBER = 46
-RPM = 1300
+LINE_NUMBER = 7
+RPM = 800
 
 # motor pins setup
 clockwise_pin = 16
@@ -32,22 +32,49 @@ total_pulse_counter = 0
 last_ts = datetime.timestamp(datetime.now())
 start_ts = last_ts
 
-i = 1  # motor speed
+direc = 0
+i = 10  # motor speed
+period_down = False
+period_start = False
+period = 1
+can_print = False
 while i < 100:
-    if (i > 30):
-        motor.forward(10)
+    if (i // 10 % 2) == 0:
+        direc = 1
+        motor.forward(100)
     else:
-        motor.backwards(10)
+        direct = -1
+        motor.backwards(100)
 
     current_a_state = GPIO.input(encoder_a)
-    b_state = GPIO.input(encoder_b)
+
+
+    if (
+        not period_down
+        and not period_start
+        and current_a_state == 1
+        and last_a_state == 0
+    ):
+        period_start = True
+        period = time.time_ns() / 1_000_000
+
+    if not period_down and period_start and current_a_state == 0 and last_a_state == 1:
+        period_down = True
+
+    if period_down and current_a_state == 1 and last_a_state == 0:
+        period = (time.time_ns() / 1_000_000) - period
+        period_down = False
+        period_start = False
+        can_print = True
+
 
     # check if encoder detected a turn
-    if current_a_state and not last_a_state:
+    if current_a_state != last_a_state and current_a_state == 1:
         total_pulse_counter += 1
 
+        b_state = GPIO.input(encoder_b)
         # check direction
-        if b_state:
+        if b_state != current_a_state:
             current_dir = "anti-horário"
             pulse_counter += 1
         else:
@@ -56,17 +83,19 @@ while i < 100:
 
     last_a_state = current_a_state
 
+    curr_ts = datetime.timestamp(datetime.now())
     # some rotory encoder calculations
-    calc_line_num = total_pulse_counter // LINE_NUMBER
-    frquency = RPM * LINE_NUMBER/60
-    calc_rpm = frquency * 60 // LINE_NUMBER
+    frequency = total_pulse_counter / (curr_ts - start_ts)
+    # calc_line_num = frequency * 60 // RPM
+    calc_rpm = frequency * 60 // LINE_NUMBER
 
     rotations = total_pulse_counter // LINE_NUMBER
 
-    print(f"Tempo: {i}, RPM: {calc_rpm}, Direção: {current_dir}, Pulsos totais: {total_pulse_counter}, Rotações {rotations}, Pulsos: {pulse_counter}")
+    if can_print:
+        can_print = False
+        print(f"Speed: {i}, RPM: {calc_rpm}, Periodo: {period}, Frequencia: {1/period}, Dir: {direc}, M_Direc: {current_dir}")
 
     # increment motor speed each second
-    curr_ts = datetime.timestamp(datetime.now())
     if (curr_ts - last_ts) > 1.0:
         i += 1
         last_ts = curr_ts
