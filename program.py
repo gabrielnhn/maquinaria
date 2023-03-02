@@ -15,6 +15,7 @@ import requests
 from datetime import datetime, timedelta
 import argparse
 import time
+import csv
 
 # init arg parser
 parser = argparse.ArgumentParser()
@@ -35,6 +36,29 @@ pwm_pin_2 = 18
 
 motor_left = DC_Motor(clockwise_pin_1, counterclockwise_pin_1, pwm_pin_1)
 motor_right = DC_Motor(clockwise_pin_2, counterclockwise_pin_2, pwm_pin_2)
+
+# encoder pin setup
+encoder_a = 19
+encoder_b = 21
+GPIO.setup(encoder_a, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+GPIO.setup(encoder_b, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+# encoder values
+# hardware pwm: 12, 32, 33, 35
+STEPS_NUMBER = 7
+RPM = 800
+# 
+RADIUS_WHEEL = 5.0
+
+# init state variables
+last_a_state = GPIO.input(encoder_a)
+current_dir = 0
+pulse_counter = 0
+total_pulse_counter = 0
+direc = 0
+period = 1
+pstart = 0
+wave_state = 0
 
 # Global vars. initial values
 runtime = 0 # time until it should stop
@@ -459,6 +483,50 @@ def process_frame(image_input, last_res_v):
     
     return res_v # return speed of the current iteration
     
+# this is a highly experimental function
+# this should be able to detect encoder readings according to encoder_test.py
+def read_encoders():
+    global current_dir
+    global pulse_counter
+    global total_pulse_counter
+    global direc
+    global period
+    global pstart
+    global wave_state
+
+    if wave_state == 0:
+        if current_a_state == 1 and last_a_state == 0:
+            period = (time.time_ns() / 1000) - pstart
+            pstart = time.time_ns() / 1000
+            wave_state = 1
+
+    elif wave_state == 1:
+        if current_a_state == 0 and last_a_state == 1:
+            wave_state = 0
+
+    # check if encoder detected a turn
+    if current_a_state != last_a_state and current_a_state == 1:
+        total_pulse_counter += 1
+
+        b_state = GPIO.input(encoder_b)
+        # check direction
+        if b_state != current_a_state:
+            current_dir = "anti-horário"
+            pulse_counter += 1
+        else:
+            current_dir = "horário"
+            pulse_counter -= 1
+
+    last_a_state = current_a_state
+
+    curr_ts = time.time()
+    # some rotory encoder calculations
+    frequency = total_pulse_counter / (curr_ts - start_ts)
+    # calc_line_num = frequency * 60 // RPM
+    calc_rpm = frequency * 60 // STEPS_NUMBER
+    rotations = total_pulse_counter // STEPS_NUMBER 
+
+
 def timeout(signum, frame):
     raise TimeoutError
 
@@ -468,6 +536,14 @@ def main():
     global error
     global no_movement_count
     lost = False
+
+    last_ts = time.time()
+    start_ts = last_ts
+    f = open('csvfile.csv', 'w')
+    writer = csv.writer(f)
+    header = ['distancia', 'linear', 'angular', 'erro']
+    # write the header
+    writer.writerow(header)
 
 
     signal.signal(signal.SIGALRM, timeout)
@@ -507,6 +583,11 @@ def main():
             image = cv2.resize(image, (width//RESIZE_SIZE, height//RESIZE_SIZE), interpolation= cv2.INTER_LINEAR)
             last_res_v = process_frame(image, last_res_v)
 
+            # I don't know if read_encoder should be called here
+            read_encoder()
+            data = [(((2 * 3.14 * RADIUS_WHEEL) / STEPS_NUMBER) * pulse_counter), linear, angular, error]
+            writer.writerow(data)
+
             retval, image = video.read()
 
 
@@ -514,6 +595,7 @@ def main():
             pass
 
     GPIO.cleanup()
+    f.close()
     end_record()
     print("Exiting...")
 

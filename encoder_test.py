@@ -15,7 +15,7 @@ counterclockwise_pin = 15
 pwm_pin = 18
 motor = DC_Motor(clockwise_pin, counterclockwise_pin, pwm_pin)
 
-# encoder pin setuo
+# encoder pin setup
 encoder_a = 19
 encoder_b = 21
 GPIO.setup(encoder_a, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
@@ -30,10 +30,7 @@ total_pulse_counter = 0
 last_ts = time.time()
 start_ts = last_ts
 
-direc = 0
-period = 1
-pstart = 0
-wave_state = 0
+
 
 i = 10  # motor speed
 while i < 100:
@@ -80,7 +77,7 @@ while i < 100:
 
     rotations = total_pulse_counter // LINE_NUMBER
 
-
+   
     print(f"Speed: {i}, RPM: {calc_rpm}, Periodo: {period}, Frequencia: {1/period}, Dir: {direc}, M_Direc: {current_dir}")
 
     # increment motor speed each second
